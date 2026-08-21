@@ -1,11 +1,21 @@
+import os
+import threading
 import telebot
 from telebot import types
+from flask import Flask
 
-# BotFather ဆီက ရလာတဲ့ Token ကို ဒီနေရာမှာ ထည့်ပါ
+# Bot Token နှင့် ဆိုင်ရှင် Chat ID
 TOKEN = "8974525056:AAFwhj7rUDgG5hJig_zgoZilZPChfDzjW3Q"
-bot = telebot.TeleBot(TOKEN)
+ADMIN_CHAT_ID = "6895174491"
 
-# ဖောက်သည်တွေ Feedback ပေးတဲ့အခါ အချက်အလက် ခေတ္တသိမ်းဆည်းရန်
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
+# Render အတွက် Web Server လမ်းကြောင်း (Port ငြိမ်စေရန်)
+@app.route('/')
+def home():
+    return "Htar Wa Ra Bot is running 24/7!"
+
 user_feedback_data = {}
 
 # ၁။ /start ခလုတ် နှိပ်တဲ့အခါ ပြမည့် ပင်မ Menu
@@ -41,9 +51,7 @@ def handle_message(message):
         bot.send_message(chat_id, services_text, parse_mode="Markdown")
         
     elif text == "📞 ဆက်သွယ်ရန် ဖုန်းနံပါတ် နှင့် လိပ်စာ":
-        # ကိုယ့်ဆိုင်ရဲ့ Google Maps Link
         map_link = "https://maps.app.goo.gl/4GMaoHEhjMPpWM9y5"
-        
         bot.send_message(
             chat_id, 
             "📞 ဆိုင်ဖုန်းနံပါတ် - 09797523108\n"
@@ -59,18 +67,22 @@ def handle_message(message):
     elif chat_id in user_feedback_data and user_feedback_data[chat_id].get("step") == "waiting_for_feedback":
         feedback_text = message.text
         
-        # ဆိုင်ရှင်ရဲ့ Chat ID
-        ADMIN_CHAT_ID = "6895174491" 
-        
         # Feedback အသစ်ဝင်လာရင် ဆိုင်ရှင်ဆီကို ပို့ပေးမယ်
         bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ Feedback အသစ်:\n\n{feedback_text}\n\nပို့သူ ID: {chat_id}")
-        
-        # ဖောက်သည်ကို ပြန်ပြောမယ်
         bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အကြံပြုချက်ကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
         
         del user_feedback_data[chat_id]
     else:
         bot.reply_to(message, "မိတ်ဆွေ၏ မက်ဆေ့ဂျ်ကို လက်ခံရရှိပါပြီ။ အသေးစိတ်သိလိုပါက အောက်ပါ Menu ခလုတ်များကို အသုံးပြုပေးပါခင်ဗျာ။")
 
-# Bot ကို စတင်အလုပ်လုပ်ခိုင်းခြင်း
-bot.infinity_polling()
+# Bot ကို Background Thread နဲ့ ဖွင့်ခြင်း
+def run_bot():
+    bot.infinity_polling()
+
+if __name__ == "__main__":
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.start()
+    
+    # Render ပေးမယ့် Port နဲ့ Flask ဆာဗာကို စတင်ခြင်း
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
