@@ -86,3 +86,26 @@ if __name__ == "__main__":
     # Render ပေးမယ့် Port နဲ့ Flask ဆာဗာကို စတင်ခြင်း
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
+# အကြံပြုချက်ပေးသူဆီသို့ ပြန်လည်ဖြေကြားရန် (Admin အတွက်)
+@bot.message_handler(commands=['reply'])
+def reply_to_user(message):
+    # ကိုယ့် Admin ID မှလွဲပြီး တခြားသူ မသုံးနိုင်အောင် စစ်ဆေးခြင်း
+    if str(message.chat.id) != ADMIN_CHAT_ID:
+        bot.reply_to(message, "ခွင့်ပြုချက်မရှိပါ။")
+        return
+    
+    # ပုံစံ: /reply [User_ID] [စာသား]
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        bot.reply_to(message, "အသုံးပြုပုံအမှား။ စနစ်: /reply [User_ID] [ပြောမယ့်စာ]")
+        return
+    
+    user_id = parts[1]
+    reply_text = parts[2]
+    
+    try:
+        bot.send_message(user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{reply_text}")
+        bot.reply_to(message, f"✅ User {user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
+    except Exception as e:
+        bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
