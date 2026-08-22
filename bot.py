@@ -33,30 +33,51 @@ def send_welcome(message):
         reply_markup=markup
     )
 
-# ၂။ ခလုတ်နှိပ်ချက်အပေါ် မူတည်ပြီး အလိုအလျောက် အဖြေပေးခြင်း နှင့် Feedback လက်ခံခြင်း
+# ၂။ Admin ဘက်က Reply လုပ်ပြီး ပြန်ာသော စနစ်
+@bot.message_handler(func=lambda message: str(message.chat.id) == ADMIN_CHAT_ID and message.reply_to_message)
+def admin_reply(message):
+    replied_msg = message.reply_to_message.caption or message.reply_to_message.text or ""
+    if "ပို့သူ ID:" in replied_msg:
+        try:
+            target_user_id = replied_msg.split("ပို့သူ ID:")[1].strip().split("\n")[0]
+            
+            # ပုံနဲ့ ပို့တာလား၊ စာနဲ့ ပို့တာလား စစ်ပြီး ပြန်ပို့မယ်
+            if message.photo:
+                photo_id = message.photo[-1].file_id
+                caption_text = f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.caption or ''}"
+                bot.send_photo(target_user_id, photo_id, caption=caption_text)
+            else:
+                bot.send_message(target_user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.text}")
+                
+            bot.reply_to(message, f"✅ User {target_user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
+            return
+        except Exception as e:
+            bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
+            return
+
+# ၃။ ဖောက်သည်များထံမှ ပုံ (Photo) ပို့လာခြင်းကို လက်ခံခြင်း
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    chat_id = message.chat.id
+    
+    # ဖောက်သည် ပို့လိုက်တဲ့ ပုံထဲက အကြီးဆုံးပုံကို ယူမယ်
+    photo_id = message.photo[-1].file_id
+    caption = message.caption or "စာတန်းမပါသော ပုံ"
+    
+    # ဆိုင်ရှင်ဆီကို ပုံနဲ့တကွ ID ပါ ပို့ပေးမယ်
+    bot.send_photo(
+        ADMIN_CHAT_ID, 
+        photo_id, 
+        caption=f"🖼️ ဖောက်သည်ထံမှ ပုံအသစ်ရောက်ရှိပါပြီ!\n\nစာသား: {caption}\n\nပို့သူ ID: {chat_id}"
+    )
+    bot.reply_to(message, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ ပုံကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
+
+# ၄။ ခလုတ်နှိပ်ချက်အပေါ် မူတည်ပြီး အလိုအလျောက် အဖြေပေးခြင်း နှင့် Feedback လက်ခံခြင်း
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text
     
-    # Admin ဘက်က ဖောက်သည်ဆီကို ချက်တင် Reply လုပ်ပြီး စာပြန်တဲ့အခါ
-    if str(chat_id) == ADMIN_CHAT_ID and message.reply_to_message:
-        replied_msg = message.reply_to_message.text
-        # ပို့ထားတဲ့ မက်ဆေ့ဂျ်ထဲက Posi ID (သို့မဟုတ်) ဖောက်သည် ID ကို ရှာယူခြင်း
-        if "ပို့သူ ID:" in replied_msg:
-            try:
-                # "ပို့သူ ID: 12345678" ဆိုတဲ့ နေရာကနေ ID ကို ဖြတ်ထုတ်ယူမယ်
-                target_user_id = replied_msg.split("ပို့သူ ID:")[1].strip().split("\n")[0]
-                
-                # ဖောက်သည်ဆီကို စာပို့မယ်
-                bot.send_message(target_user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{text}")
-                bot.reply_to(message, f"✅ User {target_user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
-                return
-            except Exception as e:
-                bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
-                return
-
-    # ပုံမှန် မက်ဆေ့ဂျ်များနှင့် ခလုတ်များ
     if text == "📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ":
         services_text = (
             "📌 **'ထာဝရ' ဆိုင်၏ ဝန်ဆောင်မှုများ:**\n\n"
@@ -80,13 +101,12 @@ def handle_message(message):
         
     elif text == "💬 အကြံပြုချက် (Feedback) ပေးမည်":
         user_feedback_data[chat_id] = {"step": "waiting_for_feedback"}
-        bot.send_message(chat_id, "ကျေးဇူးပြု၍ ဆိုင်ဝန်ဆောင်မှုအပေါ် သင်၏ အကြံပြုချက် သို့မဟုတ် လိုအပ်ချက်များကို ဤချတ်ထဲတွင် ရေးသားပေးပို့ပါ။")
+        bot.send_message(chat_id, "ကျေးဇူးပြု၍ ဆိုင်ဝန်ဆောင်မှုအပေါ် သင်၏ အကြံပြုချက် သို့မဟုတ် လိုအပ်ချက်များကို ဤချတ်ထဲတွင် ရေးသားပေးပို့ပါ။ (ပုံလည်း ပို့နိုင်ပါသည်)")
         
     elif chat_id in user_feedback_data and user_feedback_data[chat_id].get("step") == "waiting_for_feedback":
         feedback_text = message.text
         
-        # Feedback အသစ်ဝင်လာရင် ဆိုင်ရှင်ဆီကို ပို့ပေးမယ် (ID ပါ ထည့်ပေးမယ်)
-        bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ Feedback အသစ်:\n\n{feedback_text}\n\nပို့သူ ID: {chat_id}")
+        bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ စာသား Feedback အသစ်:\n\n{feedback_text}\n\nပို့သူ ID: {chat_id}")
         bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အကြံပြုချက်ကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
         
         del user_feedback_data[chat_id]
