@@ -23,7 +23,7 @@ def send_welcome(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn1 = types.KeyboardButton("📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ")
     btn2 = types.KeyboardButton("💬 အော်ဒါမှာမည်/အကြံပြုမည်")
-    btn3 = types.KeyboardButton("📞 ဆက်သွယ်ရန် လိပ်စာ")
+    btn3 = types.KeyboardButton("📞 ဆက်သွယ်ရန် နှင့် TikTok")
     markup.add(btn1, btn2, btn3)
     
     bot.reply_to(
@@ -81,15 +81,17 @@ def handle_message(message):
         )
         bot.send_message(chat_id, services_text, parse_mode="Markdown")
         
-    elif text == "📞 ဆက်သွယ်ရန် လိပ်စာ":
+    elif text == "📞 ဆက်သွယ်ရန် နှင့် TikTok":
         map_link = "https://maps.app.goo.gl/4GMaoHEhjMPpWM9y5"
-        bot.send_message(
-            chat_id, 
+        tiktok_link = "https://www.tiktok.com/@sara.eiswe?_r=1&_t=ZS-995a5DBYIlg"
+        
+        contact_text = (
             "📞 ဆိုင်ဖုန်းနံပါတ် - 09797523108\n"
             "📍 လိပ်စာ - မြူရုံးလမ်း၊ သံကြိုးတိုင်ရပ်ကွက်၊ ဝါးခယ်မမြို့\n\n"
-            "🗺️ [ဆိုင်ကို လာရောက်ရန် ဤနေရာကို နှိပ်ပါ](" + map_link + ")",
-            parse_mode="Markdown"
+            f"🎬 **TikTok ဖော်လိုလုပ်ရန်:** [Htar Wa Ra TikTok](" + tiktok_link + ")\n"
+            f"🗺️ **Google Map လမ်းညွှန်:** [ဆိုင်သို့ လာရန် ဤနေရာကို နှိပ်ပါ](" + map_link + ")"
         )
+        bot.send_message(chat_id, contact_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     elif text == "💬 အော်ဒါမှာမည်/အကြံပြုမည်":
         order_format_text = (
