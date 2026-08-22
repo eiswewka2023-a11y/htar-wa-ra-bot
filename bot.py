@@ -33,33 +33,30 @@ def send_welcome(message):
         reply_markup=markup
     )
 
-# ၂။ Admin အတွက် ဖောက်သည်ဆီသို့ ပြန်လည်ဖြေကြားရန် (/reply [User_ID] [စာသား])
-@bot.message_handler(commands=['reply'])
-def reply_to_user(message):
-    if str(message.chat.id) != ADMIN_CHAT_ID:
-        bot.reply_to(message, "ခွင့်ပြုချက်မရှိပါ။")
-        return
-    
-    parts = message.text.split(maxsplit=2)
-    if len(parts) < 3:
-        bot.reply_to(message, "အသုံးပြုပုံအမှား။ စနစ်: /reply [User_ID] [ပြောမယ့်စာ]")
-        return
-    
-    user_id = parts[1]
-    reply_text = parts[2]
-    
-    try:
-        bot.send_message(user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{reply_text}")
-        bot.reply_to(message, f"✅ User {user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
-    except Exception as e:
-        bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
-
-# ၃။ ခလုတ်နှိပ်ချက်အပေါ် မူတည်ပြီး အလိုအလျောက် အဖြေပေးခြင်း
+# ၂။ ခလုတ်နှိပ်ချက်အပေါ် မူတည်ပြီး အလိုအလျောက် အဖြေပေးခြင်း နှင့် Feedback လက်ခံခြင်း
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text
     
+    # Admin ဘက်က ဖောက်သည်ဆီကို ချက်တင် Reply လုပ်ပြီး စာပြန်တဲ့အခါ
+    if str(chat_id) == ADMIN_CHAT_ID and message.reply_to_message:
+        replied_msg = message.reply_to_message.text
+        # ပို့ထားတဲ့ မက်ဆေ့ဂျ်ထဲက Posi ID (သို့မဟုတ်) ဖောက်သည် ID ကို ရှာယူခြင်း
+        if "ပို့သူ ID:" in replied_msg:
+            try:
+                # "ပို့သူ ID: 12345678" ဆိုတဲ့ နေရာကနေ ID ကို ဖြတ်ထုတ်ယူမယ်
+                target_user_id = replied_msg.split("ပို့သူ ID:")[1].strip().split("\n")[0]
+                
+                # ဖောက်သည်ဆီကို စာပို့မယ်
+                bot.send_message(target_user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{text}")
+                bot.reply_to(message, f"✅ User {target_user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
+                return
+            except Exception as e:
+                bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
+                return
+
+    # ပုံမှန် မက်ဆေ့ဂျ်များနှင့် ခလုတ်များ
     if text == "📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ":
         services_text = (
             "📌 **'ထာဝရ' ဆိုင်၏ ဝန်ဆောင်မှုများ:**\n\n"
@@ -88,7 +85,7 @@ def handle_message(message):
     elif chat_id in user_feedback_data and user_feedback_data[chat_id].get("step") == "waiting_for_feedback":
         feedback_text = message.text
         
-        # Feedback အသစ်ဝင်လာရင် ဆိုင်ရှင်ဆီကို ပို့ပေးမယ်
+        # Feedback အသစ်ဝင်လာရင် ဆိုင်ရှင်ဆီကို ပို့ပေးမယ် (ID ပါ ထည့်ပေးမယ်)
         bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ Feedback အသစ်:\n\n{feedback_text}\n\nပို့သူ ID: {chat_id}")
         bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အကြံပြုချက်ကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
         
