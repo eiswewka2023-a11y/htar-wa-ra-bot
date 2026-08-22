@@ -11,20 +11,19 @@ ADMIN_CHAT_ID = "6895174491"
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Render အတွက် Web Server လမ်းကြောင်း (Port ငြိမ်စေရန်)
 @app.route('/')
 def home():
     return "Htar Wa Ra Bot is running 24/7!"
 
 user_feedback_data = {}
 
-# ၁။ /start ခလုတ် နှိပ်တဲ့အခါ ပြမည့် ပင်မ Menu
+# ၁။ /start ခလုတ်
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn1 = types.KeyboardButton("📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ")
-    btn2 = types.KeyboardButton("💬 အကြံပြုချက် နှင့် အော်ဒါမှာမည်")
-    btn3 = types.KeyboardButton("📞 ဆက်သွယ်ရန် ဖုန်းနံပါတ် နှင့် လိပ်စာ")
+    btn2 = types.KeyboardButton("💬 အော်ဒါမှာမည်/အကြံပြုမည်")
+    btn3 = types.KeyboardButton("📞 ဆက်သွယ်ရန် လိပ်စာ")
     markup.add(btn1, btn2, btn3)
     
     bot.reply_to(
@@ -40,25 +39,21 @@ def admin_reply(message):
     if "ပို့သူ ID:" in replied_msg:
         try:
             target_user_id = replied_msg.split("ပို့သူ ID:")[1].strip().split("\n")[0]
-            
             if message.photo:
                 photo_id = message.photo[-1].file_id
-                caption_text = f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.caption or ''}"
-                bot.send_photo(target_user_id, photo_id, caption=caption_text)
+                bot.send_photo(target_user_id, photo_id, caption=f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.caption or ''}")
             else:
                 bot.send_message(target_user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.text}")
-                
             bot.reply_to(message, f"✅ User {target_user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
             return
         except Exception as e:
             bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
             return
 
-# ၃။ ဖောက်သည်များထံမှ ပုံ (Photo) ပို့လာခြင်းကို လက်ခံခြင်း
+# ၃။ ဖောက်သည်များထံမှ ပုံပို့ခြင်းကို လက်ခံခြင်း
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     chat_id = message.chat.id
-    
     photo_id = message.photo[-1].file_id
     caption = message.caption or "စာတန်းမပါသော ပုံ"
     
@@ -69,7 +64,7 @@ def handle_photo(message):
     )
     bot.reply_to(message, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ ပုံနှင့် အချက်အလက်များကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
 
-# ၄။ ခလုတ်နှိပ်ချက်အပေါ် မူတည်ပြီး အလိုအလျောက် အဖြေပေးခြင်း နှင့် Order Format ပို့ပေးခြင်း
+# ၄။ စာသားများနှင့် ခလုတ်များအတွက် အဓိက Handler
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     chat_id = message.chat.id
@@ -86,7 +81,7 @@ def handle_message(message):
         )
         bot.send_message(chat_id, services_text, parse_mode="Markdown")
         
-    elif text == "📞 ဆက်သွယ်ရန် ဖုန်းနံပါတ် နှင့် လိပ်စာ":
+    elif text == "📞 ဆက်သွယ်ရန် လိပ်စာ":
         map_link = "https://maps.app.goo.gl/4GMaoHEhjMPpWM9y5"
         bot.send_message(
             chat_id, 
@@ -96,7 +91,7 @@ def handle_message(message):
             parse_mode="Markdown"
         )
         
-    elif text == "💬 အကြံပြုချက် နှင့် အော်ဒါမှာမည်":
+    elif text == "💬 အော်ဒါမှာမည်/အကြံပြုမည်":
         order_format_text = (
             "📝 **အော်ဒါမှာယူရန်/အကြံပြုရန် ဤပုံစံအတိုင်း ဖြည့်စွက် ပို့ပေးပါခင်ဗျာ:**\n\n"
             "၁။ လိုချင်သည့် ဝန်ဆောင်မှု (ဥပမာ- ဓာတ်ပုံ၊ ဖိတ်စာ၊ ပရင့်) -\n"
@@ -109,15 +104,13 @@ def handle_message(message):
         
     elif chat_id in user_feedback_data and user_feedback_data[chat_id].get("step") == "waiting_for_order":
         order_text = message.text
-        
         bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ အော်ဒါ/စာသား အသစ်:\n\n{order_text}\n\nပို့သူ ID: {chat_id}")
-        bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အချက်အလက်များကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။ ဆိုင်မှ မကြာမီ ပြန်လည်ဆက်သွယ်ပါမည်။")
-        
+        bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အချက်အလက်များကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
         del user_feedback_data[chat_id]
+        
     else:
         bot.reply_to(message, "မိတ်ဆွေ၏ မက်ဆေ့ဂျ်ကို လက်ခံရရှိပါပြီ။ အသေးစိတ်သိလိုပါက အောက်ပါ Menu ခလုတ်များကို အသုံးပြုပေးပါခင်ဗျာ။")
 
-# Bot ကို Background Thread နဲ့ ဖွင့်ခြင်း
 def run_bot():
     bot.infinity_polling()
 
@@ -125,6 +118,5 @@ if __name__ == "__main__":
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.start()
     
-    # Render ပေးမယ့် Port နဲ့ Flask ဆာဗာကို စတင်ခြင်း
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
