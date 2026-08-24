@@ -1,5 +1,4 @@
 import os
-import sys
 from flask import Flask, request
 import telebot
 import google.generativeai as genai
@@ -10,7 +9,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Gemini Configure
 genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_INSTRUCTION = """
@@ -20,10 +18,26 @@ SYSTEM_INSTRUCTION = """
 အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်တယ်၊ ဥပမာတွေပေးပြီး နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေနဲ့ အဘက်ဘက်က အထောက်အကူပြု အားကိုးရတဲ့သူ ဖြစ်ပါတယ်။
 """
 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=SYSTEM_INSTRUCTION
-)
+def get_working_model():
+    """မိမိ API Key ဖြင့် သုံးနိုင်သော Gemini Model ကို အလိုအလျောက် ရှာဖွေပေးသည့် Function"""
+    try:
+        available_models = [
+            m.name for m in genai.list_models()
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        print(f"Available Models: {available_models}", flush=True)
+        
+        # ဦးစားပေး Model နာမည်များကို စစ်ဆေးမည်
+        for preferred in ['models/gemini-1.5-flash', 'models/gemini-1.5-flash-latest', 'models/gemini-1.5-pro', 'models/gemini-pro']:
+            if preferred in available_models:
+                return preferred
+                
+        if available_models:
+            return available_models[0]
+    except Exception as e:
+        print(f"Model listing error: {e}", flush=True)
+        
+    return "models/gemini-1.5-flash-latest"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
@@ -32,21 +46,22 @@ def get_message():
     if data and "message" in data and "text" in data["message"]:
         chat_id = data["message"]["chat"]["id"]
         user_text = data["message"]["text"]
-        print(f"Received message: {user_text}", flush=True)
         
         try:
-            # Gemini ထံ မက်ဆေ့ချ် ပို့ခြင်း
+            # အလုပ်လုပ်သော Model နာမည်ကို ယူပြီး Gemini ဆီ စာပို့မည်
+            active_model_name = get_working_model()
+            model = genai.GenerativeModel(
+                model_name=active_model_name,
+                system_instruction=SYSTEM_INSTRUCTION
+            )
             response = model.generate_content(user_text)
             reply_text = response.text
         except Exception as e:
-            # Error တက်ပါက အတိအကျ သိရအောင် Telegram ထဲ တန်းပြမည်
             print(f"Gemini Error: {e}", flush=True)
-            reply_text = f"Gemini API Error တက်နေပါသည်: {str(e)}"
+            reply_text = f"API Error: {str(e)}"
             
         try:
-            # Telegram ထံ ပြန်ပို့ခြင်း
             bot.send_message(chat_id, reply_text)
-            print("Message sent successfully!", flush=True)
         except Exception as e:
             print(f"Telegram Send Error: {e}", flush=True)
             
