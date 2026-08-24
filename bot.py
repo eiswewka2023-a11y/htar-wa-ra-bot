@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request
 import telebot
-from google import genai
+import google.generativeai as genai
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -9,22 +9,31 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+# အသေချာဆုံး Google Generative AI (Stable Version) ကို ချိတ်ဆက်ခြင်း
+genai.configure(api_key=GEMINI_API_KEY)
 
-SYSTEM_PROMPT = """
+# FOREVERRI ရဲ့ စရိုက်လက္ခဏာ
+SYSTEM_INSTRUCTION = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
 မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - 09797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
 စာနဲ့ ဓါတ်ပုံထုတ်တာတွေ၊ ဖိတ်စာနဲ့ ပတ်သက်လာရင် ကျွမ်းကျင်သူတစ်ယောက်လို အကြံပေးတတ်တယ်၊ ပြင်ဆင်ပေးတတ်တယ်။
 အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်တယ်၊ ဥပမာတွေပေးပြီး နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေနဲ့ အဘက်ဘက်က အထောက်အကူပြု အားကိုးရတဲ့သူ ဖြစ်ပါတယ်။
-အခု მომხმარပေးထားတဲ့ မေးခွန်းကို အဲ့ဒီပုံစံအတိုင်း သူငယ်ချင်းတစ်ယောက်လို ဖော်ဖော်ရွေရွေ ပြန်ပြောပေးပါ။
-မေးခွန်း - 
 """
+
+# Model ကို ကြိုတင်ပြင်ဆင်ထားခြင်း
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_INSTRUCTION
+)
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
-    json_string = request.get_data().decode("utf-8")
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
+    try:
+        json_string = request.get_data().decode("utf-8")
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+    except Exception as e:
+        print(f"Webhook Error: {e}")
     return "!", 200
 
 @app.route("/")
@@ -39,17 +48,19 @@ def handle_all_messages(message):
     chat_id = message.chat.id
     
     try:
-        full_prompt = SYSTEM_PROMPT + user_text
-        # Model နာမည်ကို gemini-1.5-flash သို့ ပြောင်းထားပါသည်
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=full_prompt,
-        )
+        # Gemini ဆီက အဖြေတောင်းခြင်း
+        response = model.generate_content(user_text)
         reply_text = response.text
     except Exception as e:
-        reply_text = f"သူငယ်ချင်းရေ... ခဏလေး လိုင်းနှေးသွားလို့ (Error: {str(e)[:50]})၊ မေးခွန်းလေး တစ်ချက်လောက် ထပ်ပို့ပေးပါဦးနော်။"
+        # Error တက်ရင် Render Log မှာ ဘာကြောင့်လဲဆိုတာ အတိအကျ ပေါ်အောင်လုပ်ထားသည်
+        print(f"Gemini API Error: {e}")
+        reply_text = "သူငယ်ချင်းရေ... ခဏလေး လိုင်းနှေးသွားလို့၊ မေးခွန်းလေး တစ်ချက်လောက် ထပ်ပို့ပေးပါဦးနော်။"
     
-    bot.send_message(chat_id, reply_text)
+    try:
+        # အဖြေကို Telegram သို့ ပြန်ပို့ခြင်း
+        bot.send_message(chat_id, reply_text)
+    except Exception as e:
+        print(f"Telegram Send Error: {e}")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
