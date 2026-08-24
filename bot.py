@@ -7,15 +7,14 @@ from google.genai import types
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")  # ဆိုင်ပိုင်ရှင်၏ Telegram Chat ID
+ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Google GenAI Official SDK Client
+# Google GenAI Client
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# User များ Feedback ပေးနေသည့် အခြေအနေကို မှတ်ထားရန်
 user_states = {}
 
 SYSTEM_PROMPT = """
@@ -34,6 +33,28 @@ def get_main_menu():
     btn5 = KeyboardButton("📝 Feedback ပေးမယ်")
     markup.add(btn1, btn2, btn3, btn4, btn5)
     return markup
+
+def generate_ai_response(prompt_text):
+    """Gemini AI ထံမှ အဖြေတောင်းယူခြင်း (Model များ အလှည့်ကျ စမ်းသပ်မည့် စနစ်)"""
+    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    last_error = ""
+
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt_text,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT
+                )
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            last_error = str(e)
+            print(f"Model {model_name} Error: {e}", flush=True)
+
+    return f"⚠️ Gemini API Error တက်နေပါသည်:\n{last_error}\n\n👉 Render ရှိ GEMINI_API_KEY ကို စစ်ဆေးပေးပါသူငယ်ချင်း။"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
@@ -58,7 +79,6 @@ def send_welcome(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_menu())
 
-# ဆိုင်ပိုင်ရှင် (Admin) မှ User ထံ စာပြန်ရန် Command: /reply <chat_id> <message>
 @bot.message_handler(commands=['reply'])
 def handle_admin_reply(message):
     try:
@@ -81,7 +101,6 @@ def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
 
-    # 1. Menu ခလုတ်များ
     if user_text == "🖨️ ဝန်ဆောင်မှုများ":
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
@@ -127,11 +146,8 @@ def handle_all_messages(message):
         bot.send_message(chat_id, "အိုကေ သူငယ်ချင်း! သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို စာရိုက်ပြီး တန်းမေးလိုက်တော့နော်။", reply_markup=get_main_menu())
         return
 
-    # 2. User က Feedback စာရေးပို့လိုက်သည့်အခါ လက်ခံသည့် အပိုင်း
     if user_states.get(chat_id) == "WAITING_FOR_FEEDBACK":
-        user_states[chat_id] = None  # State ပြန်ဖျက်မည်
-        
-        # Admin ထံ စာပို့ပေးခြင်း
+        user_states[chat_id] = None
         if ADMIN_CHAT_ID:
             admin_msg = (
                 f"📩 **Feedback အသစ်ရောက်လာပါတယ်!**\n\n"
@@ -153,20 +169,8 @@ def handle_all_messages(message):
         )
         return
 
-    # 3. Gemini AI ဖြင့် စကားပြောသည့် အပိုင်း
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=user_text,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT
-            )
-        )
-        reply_text = response.text
-    except Exception as e:
-        print(f"Server Log Error: {e}", flush=True)
-        reply_text = "သူငယ်ချင်းရေ... ခဏလေး လိုင်းနှေးသွားလို့ပါ၊ စာလေး တစ်ချက်လောက် ထပ်ပို့ပေးပါဦးနော်။"
-
+    # Gemini AI သို့ စာပို့ခြင်း
+    reply_text = generate_ai_response(user_text)
     bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
 
 if __name__ == "__main__":
