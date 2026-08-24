@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# User တစ်ယောက်ချင်းစီ၏ စကားပြော狀態 (State) ကို မှတ်ထားရန်
+# User တစ်ယောက်ချင်းစီ၏ State ကို မှတ်ထားရန်
 user_states = {}
 
 SYSTEM_PROMPT = """
@@ -82,7 +82,6 @@ def send_welcome(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_menu())
 
-# Admin မှ Customer ထံ စာပြန်ပေးခြင်း
 @bot.message_handler(commands=['reply'])
 def handle_admin_reply(message):
     try:
@@ -94,7 +93,6 @@ def handle_admin_reply(message):
         target_chat_id = str(args[1]).strip()
         reply_msg = args[2]
 
-        # Customer ရဲ့ State ကို ဆိုင်နှင့် တိုက်ရိုက် စကားပြောနေသည့်အဆင့်သို့ ပြောင်းပါမည်
         user_states[int(target_chat_id)] = "CHAT_WITH_ADMIN"
 
         send_text = (
@@ -106,7 +104,6 @@ def handle_admin_reply(message):
     except Exception as e:
         bot.reply_to(message, f"❌ စာပို့၍ မရပါ: {str(e)}")
 
-# Customer ထံမှ ဓါတ်ပုံ ရောက်ရှိလာပါက Handling
 @bot.message_handler(content_types=['photo'])
 def handle_incoming_photo(message):
     chat_id = message.chat.id
@@ -134,17 +131,23 @@ def handle_incoming_photo(message):
         reply_markup=get_main_menu()
     )
 
-# Customer စာပို့သမျှ ပင်မ Handler
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
 
-    # 1. Menu ခလုတ်များ နှိပ်ပါက State အဟောင်းများကို ဖျက်မည်
-    if user_text in ["🖨️ ဝန်ဆောင်မှုများ", "📞 ဆက်သွယ်ရန်", "📍 ဆိုင်လိပ်စာ", "💬 စကားပြောမယ်", "📝 Feedback ပေးမယ်"]:
-        user_states[chat_id] = None
+    # 1. Menu ခလုတ်များ စစ်ဆေးခြင်း
+    if user_text == "💬 စကားပြောမယ်":
+        user_states[chat_id] = "AI_CHAT"  # AI Chat Mode သို့ ပြောင်းပါသည်
+        bot.send_message(
+            chat_id, 
+            "အိုကေ သူငယ်ချင်း! အခု AI နဲ့ စကားပြောနိုင်တဲ့ Mode ထဲ ရောက်ပါပြီ။ သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို ရိုက်မေးနိုင်ပါပြီနော်။ 🤖", 
+            reply_markup=get_main_menu()
+        )
+        return
 
-    if user_text == "🖨️ ဝန်ဆောင်မှုများ":
+    elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
+        user_states[chat_id] = None  # AI Mode မှ ထွက်မည်
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
             "• စာရွက်စာတမ်း မိတ္တူကူးခြင်း / စာရွက်ထုတ်ခြင်း\n"
@@ -157,6 +160,7 @@ def handle_all_messages(message):
         return
 
     elif user_text == "📞 ဆက်သွယ်ရန်":
+        user_states[chat_id] = None
         contact_info = (
             "📞 **ထာဝရ ဆက်သွယ်ရန်**\n\n"
             "• ဖုန်းနံပါတ်: 09797523108\n"
@@ -167,6 +171,7 @@ def handle_all_messages(message):
         return
 
     elif user_text == "📍 ဆိုင်လိပ်စာ":
+        user_states[chat_id] = None
         location = (
             "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
             "🗺️ **Google Maps လိပ်စာ:** https://maps.app.goo.gl/9UPunmNKnJ5R4Ka58\n"
@@ -185,11 +190,7 @@ def handle_all_messages(message):
         )
         return
 
-    elif user_text == "💬 စကားပြောမယ်":
-        bot.send_message(chat_id, "အိုကေ သူငယ်ချင်း! သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို စာရိုက်ပြီး တန်းမေးလိုက်တော့နော်။", reply_markup=get_main_menu())
-        return
-
-    # 2. Customer သည် Admin ၏ စာကို တိုက်ရိုက် စာပြန်နေသည့် အခြေအနေ (Follow-up Chat)
+    # 2. Customer သည် Admin နှင့် တိုက်ရိုက် စကားပြောနေသည့် အခြေအနေ
     if user_states.get(chat_id) == "CHAT_WITH_ADMIN":
         if ADMIN_CHAT_ID:
             admin_msg = (
@@ -232,9 +233,18 @@ def handle_all_messages(message):
         )
         return
 
-    # 4. Gemini AI ဖြင့် ပုံမှန် စကားပြောသည့် အပိုင်း
-    reply_text = generate_ai_response(user_text)
-    bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
+    # 4. "💬 စကားပြောမယ်" ကို နှိပ်ထားမှသာ Gemini AI ဖြင့် အဖြေထုတ်ပေးမည်
+    if user_states.get(chat_id) == "AI_CHAT":
+        reply_text = generate_ai_response(user_text)
+        bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
+        return
+
+    # 5. Default Response (AI Mode မဝင်ထားပါက ညွှန်းပေးမည်)
+    bot.send_message(
+        chat_id, 
+        "ကျေးဇူးပြု၍ အောက်ပါ Menu ခလုတ်များမှ ရွေးချယ်ပေးပါနော်။\nAI နဲ့ စကားပြောလိုပါက '💬 စကားပြောမယ်' ခလုတ်ကို နှိပ်ပေးပါ သူငယ်ချင်း! 👇", 
+        reply_markup=get_main_menu()
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
