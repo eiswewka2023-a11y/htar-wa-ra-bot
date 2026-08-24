@@ -118,7 +118,7 @@ def handle_all_messages(message):
             "📞 **ထာဝရ ဆက်သွယ်ရန်**\n\n"
             "• ဖုန်းနံပါတ်: 09797523108\n"
             "• TikTok: https://www.tiktok.com/@sara.eiswe\n\n"
-            "အချိန်မရွေး စာမေးလို့ရပါတယ်နော်!"
+            "အလုပ်အတွက်အချိန်မရွေး စုံစမ်းမေးမြန်းလို့ရပါတယ်နော်!"
         )
         bot.send_message(chat_id, contact_info, reply_markup=get_main_menu())
         return
