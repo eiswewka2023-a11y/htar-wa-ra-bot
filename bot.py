@@ -2,7 +2,8 @@ import os
 from flask import Flask, request
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -10,8 +11,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Google Generative AI (Stable Version) configure
-genai.configure(api_key=GEMINI_API_KEY)
+# Google GenAI Official SDK Client ချိတ်ဆက်ခြင်း
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
@@ -20,11 +21,7 @@ SYSTEM_PROMPT = """
 အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်သူ၊ ဥပမာပေးတတ်သူ၊ နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေ အားကိုးရသူ ဖြစ်ပါတယ်။
 """
 
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=SYSTEM_PROMPT
-)
-
+# Telegram Menu Keyboard ပြုလုပ်သည့် Function
 def get_main_menu():
     markup = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn1 = KeyboardButton("💬 စကားပြောမယ်")
@@ -47,6 +44,7 @@ def webhook():
     bot.set_webhook(url=f"https://htar-wa-ra-bot.onrender.com/{TOKEN}")
     return "Htar Wa Ra Bot is running smoothly!", 200
 
+# /start သို့မဟုတ် /menu နှိပ်ပါက မာနူးခလုတ်များ ပြပေးမည်
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
     welcome_text = (
@@ -62,6 +60,7 @@ def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
 
+    # Menu ခလုတ်များ
     if user_text == "🖨️ ဝန်ဆောင်မှုများ":
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
@@ -85,16 +84,29 @@ def handle_all_messages(message):
         return
 
     elif user_text == "📍 ဆိုင်လိပ်စာ":
-        location = "📍 'ထာဝရ' မိတ္တူဆိုင်သို့ ကြိုဆိုပါတယ် သူငယ်ချင်း! အသေးစိတ် သိရှိလိုပါက 09797523108 သို့ ဖုန်းဆက်မေးမြန်းနိုင်ပါတယ်။"
-        bot.send_message(chat_id, location, reply_markup=get_main_menu())
+        # Google Maps URL ကို မိမိဆိုင်၏ ပင်ထောက်ထားသော Link ဖြင့် အစားထိုးနိုင်ပါသည်။
+        location = (
+            "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
+            "🗺️ **Google Maps လိပ်စာ:** https://maps.google.com\n"
+            "📞 **ဆက်သွယ်ရန် ဖုန်း:** 09797523108\n\n"
+            "ဆိုင်သို့ ကြိုဆိုပါတယ် သူငယ်ချင်း!"
+        )
+        bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
         return
 
     elif user_text == "💬 စကားပြောမယ်":
         bot.send_message(chat_id, "အိုကေ သူငယ်ချင်း! သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို စာရိုက်ပြီး တန်းမေးလိုက်တော့နော်။", reply_markup=get_main_menu())
         return
 
+    # Gemini API ခေါ်ယူခြင်း
     try:
-        response = model.generate_content(user_text)
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=user_text,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT
+            )
+        )
         reply_text = response.text
     except Exception as e:
         print(f"Server Log Error: {e}", flush=True)
