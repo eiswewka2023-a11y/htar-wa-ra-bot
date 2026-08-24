@@ -5,12 +5,10 @@ from telebot import types
 from flask import Flask
 import google.generativeai as genai
 
-# Bot Token နှင့် ဆိုင်ရှင် Chat ID
-TOKEN = "8974525056:AAFwhj7rUDgG5hJig_zgoZilZPChfDzjW3Q"
-ADMIN_CHAT_ID = "6895174491"
-
-# Gemini AI API Key ကို ထည့်သွင်းပြီးပါပြီ
-GEMINI_API_KEY = "AQ.Ab8RN6J7Dy-zTDiCpFMreYHgHZWosbR56Wz2j67vzYD8JAlBrQ" 
+# အရေးကြီးသော Token နှင့် ID များကို Environment မှ လှမ်းယူခြင်း
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 genai.configure(api_key=GEMINI_API_KEY)
 
@@ -28,7 +26,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Htar Wa Ra Bot with AI is running 24/7!"
+    return "Htar Wa Ra Secure Bot is running 24/7!"
 
 user_feedback_data = {}
 
@@ -126,7 +124,6 @@ def handle_message(message):
         del user_feedback_data[chat_id]
         
     else:
-        # လွတ်လပ်စွာ လာမေးသမျှကို AI က ဝင်ဖြေပေးမယ့်နေရာ
         try:
             ai_response = model.start_chat(history=[]).send_message(text)
             bot.reply_to(message, ai_response.text)
