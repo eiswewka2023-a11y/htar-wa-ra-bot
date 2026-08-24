@@ -117,7 +117,6 @@ def handle_message(message):
         
     else:
         try:
-            # GenAI SDK အသစ်သုံးပြီး စာသားမေးမြန်းခြင်း
             response = client.models.generate_content(
                 model='gemini-1.5-flash',
                 contents=text,
