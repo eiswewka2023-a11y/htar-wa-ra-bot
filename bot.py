@@ -128,7 +128,7 @@ def handle_all_messages(message):
             "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
             "🗺️ **Google Maps လိပ်စာ:** https://maps.app.goo.gl/9UPunmNKnJ5R4Ka58\n"
             "📞 **ဆက်သွယ်ရန် ဖုန်း:** 09797523108\n\n"
-            "ဆိုင်သို့ ကြိုဆိုပါတယ် သူငယ်ချင်း!"
+            "'ထာဝရ'မိတ္တူ/ဖိတ်စာဆိုင်မှ ကြိုဆိုပါတယ် သူငယ်ချင်း!"
         )
         bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
         return
