@@ -3,17 +3,32 @@ import threading
 import telebot
 from telebot import types
 from flask import Flask
+import google.generativeai as genai
 
 # Bot Token နှင့် ဆိုင်ရှင် Chat ID
 TOKEN = "8974525056:AAFwhj7rUDgG5hJig_zgoZilZPChfDzjW3Q"
 ADMIN_CHAT_ID = "6895174491"
+
+# Gemini AI API Key ကို ထည့်သွင်းပြီးပါပြီ
+GEMINI_API_KEY = "AQ.Ab8RN6J7Dy-zTDiCpFMreYHgHZWosbR56Wz2j67vzYD8JAlBrQ" 
+
+genai.configure(api_key=GEMINI_API_KEY)
+
+generation_config = {
+    "temperature": 0.7,
+}
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+    system_instruction="သင်သည် မြန်မာနိုင်ငံ၊ ဝါးခယ်မမြို့ရှိ 'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံဆိုင်မှ ဖောက်သည်များကို ဖော်ရွေစွာ ဝန်ဆောင်မှုပေးသော AI လက်ထောက် ဖြစ်သည်။ ဆိုင်တွင် စာရွက်စာတမ်း မိတ္တူကူးခြင်း၊ ပရင့်ထုတ်ခြင်း၊ ဓါတ်ပုံရိုက်ခြင်း/ထုတ်ခြင်း၊ မင်္ဂလာဖိတ်စာဒီဇိုင်းနှင့် လက်ဆောင်ယပ်တောင်ပြုလုပ်ခြင်း ဝန်ဆောင်မှုများ ရှိသည်။ ဖောက်သည်များကို ယဉ်ကျေးပျူငှာစွာ အကြံပေးပါ။"
+)
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Htar Wa Ra Bot is running 24/7!"
+    return "Htar Wa Ra Bot with AI is running 24/7!"
 
 user_feedback_data = {}
 
@@ -111,7 +126,12 @@ def handle_message(message):
         del user_feedback_data[chat_id]
         
     else:
-        bot.reply_to(message, "မိတ်ဆွေ၏ မက်ဆေ့ဂျ်ကို လက်ခံရရှိပါပြီ။ အသေးစိတ်သိလိုပါက အောက်ပါ Menu ခလုတ်များကို အသုံးပြုပေးပါခင်ဗျာ။")
+        # လွတ်လပ်စွာ လာမေးသမျှကို AI က ဝင်ဖြေပေးမယ့်နေရာ
+        try:
+            ai_response = model.start_chat(history=[]).send_message(text)
+            bot.reply_to(message, ai_response.text)
+        except Exception as e:
+            bot.reply_to(message, "မိတ်ဆွေ၏ မက်ဆေ့ဂျ်ကို လက်ခံရရှိပါပြီ။ အသေးစိတ်သိလိုပါက အောက်ပါ Menu ခလုတ်များကို အသုံးပြုပေးပါခင်ဗျာ။")
 
 def run_bot():
     bot.infinity_polling()
