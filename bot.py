@@ -12,12 +12,11 @@ ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Google GenAI Client
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+# User တစ်ယောက်ချင်းစီ၏ စကားပြော狀態 (State) ကို မှတ်ထားရန်
 user_states = {}
 
-# တိုတိုတုပ်တုပ် ဖြေခိုင်းထားသော System Prompt
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
 မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - 09797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
@@ -25,7 +24,7 @@ SYSTEM_PROMPT = """
 
 အရေးကြီးသော စည်းကမ်းချက်:
 • စာပြန်သည့်အခါ အရှည်ကြီး မရေးရပါ။
-• လိုရင်းတိုရှင်း တိုတိုတုပ်တုပ်ပဲ စာကြောင်း ၅ ကြောင်း သို့မဟုတ် ၇ ကြောင်းထက် မပိုဘဲ ရင်းနှီးဖော်ရွေစွာ ပြန်ဖြေပေးပါ။
+• လိုရင်းတိုရှင်း တိုတိုတုပ်တုပ်ပဲ စာကြောင်း ၂ ကြောင်း သို့မဟုတ် ၃ ကြောင်းထက် မပိုဘဲ ရင်းနှီးဖော်ရွေစွာ ပြန်ဖြေပေးပါ။
 """
 
 def get_main_menu():
@@ -39,7 +38,6 @@ def get_main_menu():
     return markup
 
 def generate_ai_response(prompt_text):
-    """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
     models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
     last_error = ""
 
@@ -75,6 +73,7 @@ def webhook():
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
+    user_states[message.chat.id] = None  # State ပြန်ဖျက်မည်
     welcome_text = (
         "မင်္ဂလာပါ သူငယ်ချင်းရေ... 'ထာဝရ' မှ ကြိုဆိုပါတယ်! 👋\n\n"
         "ငါကတော့ FOREVERRI ပါ။ မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာနဲ့ ပတ်သက်ရင် "
@@ -83,6 +82,7 @@ def send_welcome(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_menu())
 
+# Admin မှ Customer ထံ စာပြန်ပေးခြင်း
 @bot.message_handler(commands=['reply'])
 def handle_admin_reply(message):
     try:
@@ -91,15 +91,22 @@ def handle_admin_reply(message):
             bot.reply_to(message, "⚠️ စာပို့ပုံစံ မှားနေပါသည်။\nပုံစံ: `/reply <user_chat_id> <ပြန်ချင်သည့်စာ>`", parse_mode="Markdown")
             return
         
-        target_chat_id = args[1]
+        target_chat_id = str(args[1]).strip()
         reply_msg = args[2]
 
-        send_text = f"📩 **'ထာဝရ' ဆိုင်မှ ပြန်လည်အကြောင်းပြန်စာ:**\n\n{reply_msg}"
-        bot.send_message(target_chat_id, send_text, parse_mode="Markdown")
-        bot.reply_to(message, "✅ User ထံ စာပြန်ပို့ပြီးပါပြီ!")
+        # Customer ရဲ့ State ကို ဆိုင်နှင့် တိုက်ရိုက် စကားပြောနေသည့်အဆင့်သို့ ပြောင်းပါမည်
+        user_states[int(target_chat_id)] = "CHAT_WITH_ADMIN"
+
+        send_text = (
+            f"📩 **'ထာဝရ' ဆိုင်မှ ပြန်လည်အကြောင်းပြန်စာ:**\n\n{reply_msg}\n\n"
+            f"💡 _(ဆိုင်သို့ ဆက်လက် စာပြန်လိုပါက ဒီထဲမှာ စာရိုက်၍ တိုက်ရိုက် ပို့နိုင်ပါတယ်)_"
+        )
+        bot.send_message(target_chat_id, send_text, parse_mode="Markdown", reply_markup=get_main_menu())
+        bot.reply_to(message, f"✅ User ({target_chat_id}) ထံ စာပြန်ပို့ပြီးပါပြီ!")
     except Exception as e:
         bot.reply_to(message, f"❌ စာပို့၍ မရပါ: {str(e)}")
 
+# Customer ထံမှ ဓါတ်ပုံ ရောက်ရှိလာပါက Handling
 @bot.message_handler(content_types=['photo'])
 def handle_incoming_photo(message):
     chat_id = message.chat.id
@@ -127,10 +134,15 @@ def handle_incoming_photo(message):
         reply_markup=get_main_menu()
     )
 
+# Customer စာပို့သမျှ ပင်မ Handler
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
+
+    # 1. Menu ခလုတ်များ နှိပ်ပါက State အဟောင်းများကို ဖျက်မည်
+    if user_text in ["🖨️ ဝန်ဆောင်မှုများ", "📞 ဆက်သွယ်ရန်", "📍 ဆိုင်လိပ်စာ", "💬 စကားပြောမယ်", "📝 Feedback ပေးမယ်"]:
+        user_states[chat_id] = None
 
     if user_text == "🖨️ ဝန်ဆောင်မှုများ":
         services = (
@@ -177,6 +189,26 @@ def handle_all_messages(message):
         bot.send_message(chat_id, "အိုကေ သူငယ်ချင်း! သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို စာရိုက်ပြီး တန်းမေးလိုက်တော့နော်။", reply_markup=get_main_menu())
         return
 
+    # 2. Customer သည် Admin ၏ စာကို တိုက်ရိုက် စာပြန်နေသည့် အခြေအနေ (Follow-up Chat)
+    if user_states.get(chat_id) == "CHAT_WITH_ADMIN":
+        if ADMIN_CHAT_ID:
+            admin_msg = (
+                f"💬 **Customer ထံမှ တိုက်ရိုက် ပြန်လည် ပို့လိုက်သောစာ:**\n\n"
+                f"👤 **အမည်:** {message.from_user.first_name}\n"
+                f"🆔 **User ID:** `{chat_id}`\n\n"
+                f"📝 **စာသား:**\n{user_text}\n\n"
+                f"----------------------\n"
+                f"👉 **ထပ်မံ Reply ပြန်ရန်:**\n`/reply {chat_id} မင်းရေးချင်တဲ့အဖြေ`"
+            )
+            try:
+                bot.send_message(ADMIN_CHAT_ID, admin_msg, parse_mode="Markdown")
+            except Exception as e:
+                print(f"Admin Relay Error: {e}", flush=True)
+
+        bot.send_message(chat_id, "ဆိုင်သို့ စာပို့လိုက်ပါပြီ သူငယ်ချင်း! ဆိုင်မှ အကြောင်းပြန်ပေးပါလိမ့်မည်။ ❤️", reply_markup=get_main_menu())
+        return
+
+    # 3. Feedback ပို့သည့် အခြေအနေ
     if user_states.get(chat_id) == "WAITING_FOR_FEEDBACK":
         user_states[chat_id] = None
         if ADMIN_CHAT_ID:
@@ -200,6 +232,7 @@ def handle_all_messages(message):
         )
         return
 
+    # 4. Gemini AI ဖြင့် ပုံမှန် စကားပြောသည့် အပိုင်း
     reply_text = generate_ai_response(user_text)
     bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
 
