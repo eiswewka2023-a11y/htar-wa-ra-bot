@@ -2,7 +2,7 @@ import os
 from flask import Flask, request
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
-from google import genai
+import google.generativeai as genai
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
@@ -10,8 +10,8 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Google GenAI Client 
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Google Generative AI (Stable Version) configure
+genai.configure(api_key=GEMINI_API_KEY)
 
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
@@ -20,7 +20,11 @@ SYSTEM_PROMPT = """
 အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်သူ၊ ဥပမာပေးတတ်သူ၊ နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေ အားကိုးရသူ ဖြစ်ပါတယ်။
 """
 
-# Telegram Menu Keyboard ပြုလုပ်သည့် Function
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_PROMPT
+)
+
 def get_main_menu():
     markup = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     btn1 = KeyboardButton("💬 စကားပြောမယ်")
@@ -43,7 +47,6 @@ def webhook():
     bot.set_webhook(url=f"https://htar-wa-ra-bot.onrender.com/{TOKEN}")
     return "Htar Wa Ra Bot is running smoothly!", 200
 
-# /start သို့မဟုတ် /menu နှိပ်ပါက မာနူးခလုတ်များ ပြပေးမည်
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
     welcome_text = (
@@ -59,7 +62,6 @@ def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
 
-    # Menu ခလုတ်များ နှိပ်သည့်အခါ တိုက်ရိုက်ပြန်ဖြေပေးမည့် အပိုင်း
     if user_text == "🖨️ ဝန်ဆောင်မှုများ":
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
@@ -91,13 +93,8 @@ def handle_all_messages(message):
         bot.send_message(chat_id, "အိုကေ သူငယ်ချင်း! သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို စာရိုက်ပြီး တန်းမေးလိုက်တော့နော်။", reply_markup=get_main_menu())
         return
 
-    # Gemini AI ဖြင့် စကားပြောသည့် အပိုင်း (Error တက်ပါက ဆာဗာ Log ထဲတွင်သာ မှတ်မည်)
     try:
-        full_prompt = f"{SYSTEM_PROMPT}\n\nအသုံးပြုသူမေးခွန်း: {user_text}"
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=full_prompt,
-        )
+        response = model.generate_content(user_text)
         reply_text = response.text
     except Exception as e:
         print(f"Server Log Error: {e}", flush=True)
