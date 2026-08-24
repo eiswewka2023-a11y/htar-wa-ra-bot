@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
@@ -73,7 +74,7 @@ def webhook():
 
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
-    user_states[message.chat.id] = None  # State ပြန်ဖျက်မည်
+    user_states[message.chat.id] = None
     welcome_text = (
         "မင်္ဂလာပါ သူငယ်ချင်းရေ... 'ထာဝရ' မှ ကြိုဆိုပါတယ်! 👋\n\n"
         "ငါကတော့ FOREVERRI ပါ။ မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာနဲ့ ပတ်သက်ရင် "
@@ -82,27 +83,34 @@ def send_welcome(message):
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_menu())
 
-@bot.message_handler(commands=['reply'])
-def handle_admin_reply(message):
-    try:
-        args = message.text.split(maxsplit=2)
-        if len(args) < 3:
-            bot.reply_to(message, "⚠️ စာပို့ပုံစံ မှားနေပါသည်။\nပုံစံ: `/reply <user_chat_id> <ပြန်ချင်သည့်စာ>`", parse_mode="Markdown")
-            return
-        
-        target_chat_id = str(args[1]).strip()
-        reply_msg = args[2]
+# 📲 Admin ဘက်မှ Telegram Native Swipe-Reply ဖြင့် တိုက်ရိုက် စာပြန်သည့် Handler
+@bot.message_handler(func=lambda message: message.reply_to_message is not None)
+def handle_swipe_reply(message):
+    # စာပို့သူသည် Admin ဟုတ်မဟုတ် စစ်ဆေးခြင်း
+    if str(message.chat.id) == str(ADMIN_CHAT_ID):
+        orig_msg = message.reply_to_message
+        text_to_search = orig_msg.text or orig_msg.caption or ""
 
-        user_states[int(target_chat_id)] = "CHAT_WITH_ADMIN"
+        # စာသားထဲမှ User ID ကို Regex ဖြင့် ရှာဖွေခြင်း
+        match = re.search(r"User ID:\s*`?(\d+)`?", text_to_search)
+        if match:
+            target_chat_id = match.group(1)
+            reply_msg = message.text
 
-        send_text = (
-            f"📩 **'ထာဝရ' ဆိုင်မှ ပြန်လည်အကြောင်းပြန်စာ:**\n\n{reply_msg}\n\n"
-            f"💡 _(ဆိုင်သို့ ဆက်လက် စာပြန်လိုပါက ဒီထဲမှာ စာရိုက်၍ တိုက်ရိုက် ပို့နိုင်ပါတယ်)_"
-        )
-        bot.send_message(target_chat_id, send_text, parse_mode="Markdown", reply_markup=get_main_menu())
-        bot.reply_to(message, f"✅ User ({target_chat_id}) ထံ စာပြန်ပို့ပြီးပါပြီ!")
-    except Exception as e:
-        bot.reply_to(message, f"❌ စာပို့၍ မရပါ: {str(e)}")
+            # Customer ၏ State ကို Direct Chat သို့ ပြောင်းမည်
+            user_states[int(target_chat_id)] = "CHAT_WITH_ADMIN"
+
+            send_text = (
+                f"📩 **'ထာဝရ' ဆိုင်မှ ပြန်လည်အကြောင်းပြန်စာ:**\n\n{reply_msg}\n\n"
+                f"💡 _(ဆိုင်သို့ ဆက်လက် စာပြန်လိုပါက ဒီထဲမှာ စာရိုက်၍ တိုက်ရိုက် ပို့နိုင်ပါတယ်)_"
+            )
+            try:
+                bot.send_message(target_chat_id, send_text, parse_mode="Markdown", reply_markup=get_main_menu())
+                bot.reply_to(message, f"✅ User ({target_chat_id}) ထံ စာပြန်ပို့ပြီးပါပြီ!")
+            except Exception as e:
+                bot.reply_to(message, f"❌ စာပို့၍ မရပါ: {str(e)}")
+        else:
+            bot.reply_to(message, "⚠️ မူရင်းစာထဲတွင် User ID မတွေ့ပါသဖြင့် စာပြန်၍ မရပါခင်ဗျာ။")
 
 @bot.message_handler(content_types=['photo'])
 def handle_incoming_photo(message):
@@ -118,7 +126,7 @@ def handle_incoming_photo(message):
             f"🆔 **User ID:** `{chat_id}`\n"
             f"📝 **Caption:** {caption}\n\n"
             f"----------------------\n"
-            f"👉 **Reply ပြန်ရန်:**\n`/reply {chat_id} စာပြန်လိုသည့်စာ`"
+            f"👉 **ဒီစာကို ဘေးပွတ်ဆွဲ (Reply) ပြီး တိုက်ရိုက် စာပြန်နိုင်ပါသည်။**"
         )
         try:
             bot.send_photo(ADMIN_CHAT_ID, photo_file_id, caption=admin_msg, parse_mode="Markdown")
@@ -136,9 +144,8 @@ def handle_all_messages(message):
     user_text = message.text
     chat_id = message.chat.id
 
-    # 1. Menu ခလုတ်များ စစ်ဆေးခြင်း
     if user_text == "💬 စကားပြောမယ်":
-        user_states[chat_id] = "AI_CHAT"  # AI Chat Mode သို့ ပြောင်းပါသည်
+        user_states[chat_id] = "AI_CHAT"
         bot.send_message(
             chat_id, 
             "အိုကေ သူငယ်ချင်း! အခု AI နဲ့ စကားပြောနိုင်တဲ့ Mode ထဲ ရောက်ပါပြီ။ သိချင်တာ သို့မဟုတ် မေးချင်တာတွေကို ရိုက်မေးနိုင်ပါပြီနော်။ 🤖", 
@@ -147,7 +154,7 @@ def handle_all_messages(message):
         return
 
     elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
-        user_states[chat_id] = None  # AI Mode မှ ထွက်မည်
+        user_states[chat_id] = None
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
             "• စာရွက်စာတမ်း မိတ္တူကူးခြင်း / စာရွက်ထုတ်ခြင်း\n"
@@ -190,7 +197,6 @@ def handle_all_messages(message):
         )
         return
 
-    # 2. Customer သည် Admin နှင့် တိုက်ရိုက် စကားပြောနေသည့် အခြေအနေ
     if user_states.get(chat_id) == "CHAT_WITH_ADMIN":
         if ADMIN_CHAT_ID:
             admin_msg = (
@@ -199,7 +205,7 @@ def handle_all_messages(message):
                 f"🆔 **User ID:** `{chat_id}`\n\n"
                 f"📝 **စာသား:**\n{user_text}\n\n"
                 f"----------------------\n"
-                f"👉 **ထပ်မံ Reply ပြန်ရန်:**\n`/reply {chat_id} မင်းရေးချင်တဲ့အဖြေ`"
+                f"👉 **ဒီစာကို ဘေးပွတ်ဆွဲ (Reply) ပြီး တိုက်ရိုက် စာပြန်နိုင်ပါသည်။**"
             )
             try:
                 bot.send_message(ADMIN_CHAT_ID, admin_msg, parse_mode="Markdown")
@@ -209,7 +215,6 @@ def handle_all_messages(message):
         bot.send_message(chat_id, "ဆိုင်သို့ စာပို့လိုက်ပါပြီ သူငယ်ချင်း! ဆိုင်မှ အကြောင်းပြန်ပေးပါလိမ့်မည်။ ❤️", reply_markup=get_main_menu())
         return
 
-    # 3. Feedback ပို့သည့် အခြေအနေ
     if user_states.get(chat_id) == "WAITING_FOR_FEEDBACK":
         user_states[chat_id] = None
         if ADMIN_CHAT_ID:
@@ -219,7 +224,7 @@ def handle_all_messages(message):
                 f"🆔 **User ID:** `{chat_id}`\n\n"
                 f"💬 **Feedback စာသား:**\n{user_text}\n\n"
                 f"----------------------\n"
-                f"👉 **Reply ပြန်ရန် ဒီလို ရေးပို့ပါ:**\n`/reply {chat_id} မင်းရေးချင်တဲ့အဖြေ`"
+                f"👉 **ဒီစာကို ဘေးပွတ်ဆွဲ (Reply) ပြီး တိုက်ရိုက် စာပြန်နိုင်ပါသည်။**"
             )
             try:
                 bot.send_message(ADMIN_CHAT_ID, admin_msg, parse_mode="Markdown")
@@ -233,13 +238,11 @@ def handle_all_messages(message):
         )
         return
 
-    # 4. "💬 စကားပြောမယ်" ကို နှိပ်ထားမှသာ Gemini AI ဖြင့် အဖြေထုတ်ပေးမည်
     if user_states.get(chat_id) == "AI_CHAT":
         reply_text = generate_ai_response(user_text)
         bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
         return
 
-    # 5. Default Response (AI Mode မဝင်ထားပါက ညွှန်းပေးမည်)
     bot.send_message(
         chat_id, 
         "ကျေးဇူးပြု၍ အောက်ပါ Menu ခလုတ်များမှ ရွေးချယ်ပေးပါနော်။\nAI နဲ့ စကားပြောလိုပါက '💬 စကားပြောမယ်' ခလုတ်ကို နှိပ်ပေးပါ သူငယ်ချင်း! 👇", 
