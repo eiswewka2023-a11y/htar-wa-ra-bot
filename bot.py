@@ -34,7 +34,7 @@ def get_main_menu():
     btn2 = KeyboardButton("🖨️ ဝန်ဆောင်မှုများ")
     btn3 = KeyboardButton("📞 ဆက်သွယ်ရန်")
     btn4 = KeyboardButton("📍 ဆိုင်လိပ်စာ")
-    btn5 = KeyboardButton("📝 Feedback ပေးမယ်")
+    btn5 = KeyboardButton("📝 Feedback ပေးမယ်(သို့မဟုတ်)ဆိုင်သို့တိုက်ရိုက်ပြောမယ်")
     markup.add(btn1, btn2, btn3, btn4, btn5)
     return markup
 
