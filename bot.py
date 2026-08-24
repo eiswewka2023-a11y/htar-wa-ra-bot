@@ -1,140 +1,62 @@
 import os
-import threading
+from flask import Flask, request
 import telebot
-from telebot import types
-from flask import Flask
 from google import genai
+from google.genai import types
 
-# အရေးကြီးသော Token နှင့် ID များကို Environment မှ လှမ်းယူခြင်း
+# Token နဲ့ API Key တွေကို Environment Variables ကနေ ယူပါတယ်
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-# Google GenAI Client အသစ်ချိတ်ဆက်ခြင်း
-client = genai.Client(api_key=GEMINI_API_KEY)
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Htar Wa Ra Secure Bot is running 24/7!"
+# Google GenAI Client အသစ်ကို ချိတ်ဆက်ခြင်း
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-user_feedback_data = {}
+# FOREVERRI ရဲ့ စရိုက်လက္ခဏာနဲ့ ဆိုင်အချက်အလက်များကို သတ်မှတ်ပေးခြင်း
+SYSTEM_INSTRUCTION = """
+မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
+မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - 09797523108, TikTok - https://www.tiktok.com/@sara.eiswe?_r=1&_t=ZS-995a5DBYIlg) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
+စာနဲ့ ဓါတ်ပုံထုတ်တာတွေ၊ ဖိတ်စာနဲ့ ပတ်သက်လာရင် ကျွမ်းကျင်သူတစ်ယောက်လို အကြံပေးတတ်တယ်၊ ပြင်ဆင်ပေးတတ်တယ်။
+အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်တယ်၊ ဥပမာတွေပေးပြီး နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေနဲ့ အဘက်ဘက်က အထောက်အကူပြု အားကိုးရတဲ့သူ ဖြစ်ပါတယ်။
+"""
 
-# ၁။ /start ခလုတ်
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    btn1 = types.KeyboardButton("📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ")
-    btn2 = types.KeyboardButton("💬 အော်ဒါမှာမည်/အကြံပြုမည်")
-    btn3 = types.KeyboardButton("📞 ဆက်သွယ်ရန် နှင့် TikTok")
-    markup.add(btn1, btn2, btn3)
-    
-    bot.reply_to(
-        message, 
-        "မင်္ဂလာပါခင်ဗျာ 🙏\n'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံဆိုင်မှ ကြိုဆိုပါတယ်။ မိတ်ဆွေကို ဘာများ ကူညီပေးရမလဲခင်ဗျာ။", 
-        reply_markup=markup
-    )
+@app.route(f"/{TOKEN}", methods=["POST"])
+def get_message():
+    json_string = request.get_data().decode("utf-8")
+    update = telebot.types.Update.de_json(json_string)
+    bot.process_new_updates([update])
+    return "!", 200
 
-# ၂။ Admin ဘက်က Reply လုပ်ပြီး ပြန်သော စနစ်
-@bot.message_handler(func=lambda message: str(message.chat.id) == ADMIN_CHAT_ID and message.reply_to_message)
-def admin_reply(message):
-    replied_msg = message.reply_to_message.caption or message.reply_to_message.text or ""
-    if "ပို့သူ ID:" in replied_msg:
-        try:
-            target_user_id = replied_msg.split("ပို့သူ ID:")[1].strip().split("\n")[0]
-            if message.photo:
-                photo_id = message.photo[-1].file_id
-                bot.send_photo(target_user_id, photo_id, caption=f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.caption or ''}")
-            else:
-                bot.send_message(target_user_id, f"📢 'ထာဝရ' ဆိုင်ရှင်မှ ပြန်ကြားချက်:\n\n{message.text}")
-            bot.reply_to(message, f"✅ User {target_user_id} ဆီသို့ အောင်မြင်စွာ ပို့ပြီးပါပြီ။")
-            return
-        except Exception as e:
-            bot.reply_to(message, f"❌ မပို့နိုင်ခဲ့ပါ။ အကြောင်းရင်း: {e}")
-            return
+@app.route("/")
+def webhook():
+    # Webhook ကို Telegram နဲ့ ချိတ်ရန်
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https://htar-wa-ra-bot.onrender.com/{TOKEN}")
+    return "Htar Wa Ra Bot is running smoothly!", 200
 
-# ၃။ ဖောက်သည်များထံမှ ပုံပို့ခြင်းကို လက်ခံခြင်း
-@bot.message_handler(content_types=['photo'])
-def handle_photo(message):
-    chat_id = message.chat.id
-    photo_id = message.photo[-1].file_id
-    caption = message.caption or "စာတန်းမပါသော ပုံ"
-    
-    bot.send_photo(
-        ADMIN_CHAT_ID, 
-        photo_id, 
-        caption=f"🖼️ ဖောက်သည်ထံမှ ပုံ/အော်ဒါ ရောက်ရှိပါပြီ!\n\nအသေးစိတ်: {caption}\n\nပို့သူ ID: {chat_id}"
-    )
-    bot.reply_to(message, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ ပုံနှင့် အချက်အလက်များကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
-
-# ၄။ စာသားများနှင့် ခလုတ်များအတွက် အဓိက Handler
+# Telegram ကနေ စာပို့လာရင် ဖမ်းယူပြီး Gemini ဆီ ပို့မယ့် Handler
 @bot.message_handler(func=lambda message: True)
-def handle_message(message):
+def handle_all_messages(message):
+    user_text = message.text
     chat_id = message.chat.id
-    text = message.text
     
-    if text == "📋 ဆိုင်ဝန်ဆောင်မှုများနှင့် ဈေးနှုန်းများ":
-        services_text = (
-            "📌 **'ထာဝရ' ဆိုင်၏ ဝန်ဆောင်မှုများ:**\n\n"
-            "၁။ စာရွက်စာတမ်း မိတ္တူကူးခြင်း / ပရင့်ထုတ်ခြင်း\n"
-            "၂။ ဓါတ်ပုံရိုက်ကူးခြင်း / ဓါတ်ပုံထုတ်ခြင်း\n"
-            "၃။ မင်္ဂလာဖိတ်စာနှင့် ဖိတ်စာဒီဇိုင်းမျိုးစုံ\n"
-            "၄။ လက်ဆောင်ယပ်တောင်ပြုလုပ်ခြင်း\n\n"
-            "ဈေးနှုန်းအသေးစိတ်သိလိုပါက ဆိုင်သို့ တိုက်ရိုက်ဆက်သွယ် မေးမြန်းနိုင်ပါသည်။"
+    try:
+        # Gemini API အသစ်သုံးပြီး အဖြေထုတ်ခြင်း
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_text,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_INSTRUCTION,
+                temperature=0.7,
+            ),
         )
-        bot.send_message(chat_id, services_text, parse_mode="Markdown")
-        
-    elif text == "📞 ဆက်သွယ်ရန် နှင့် TikTok":
-        map_link = "https://maps.app.goo.gl/4GMaoHEhjMPpWM9y5"
-        tiktok_link = "https://www.tiktok.com/@sara.eiswe?_r=1&_t=ZS-995a5DBYIlg"
-        
-        contact_text = (
-            "📞 ဆိုင်ဖုန်းနံပါတ် - 09797523108\n"
-            "📍 လိပ်စာ - မြူရုံးလမ်း၊ သံကြိုးတိုင်ရပ်ကွက်၊ ဝါးခယ်မမြို့\n\n"
-            f"🎬 **TikTok ဖော်လိုလုပ်ရန်:** [Htar Wa Ra TikTok](" + tiktok_link + ")\n"
-            f"🗺️ **Google Map လမ်းညွှန်:** [ဆိုင်သို့ လာရန် ဤနေရာကို နှိပ်ပါ](" + map_link + ")"
-        )
-        bot.send_message(chat_id, contact_text, parse_mode="Markdown", disable_web_page_preview=True)
-        
-    elif text == "💬 အော်ဒါမှာမည်/အကြံပြုမည်":
-        order_format_text = (
-            "📝 **အော်ဒါမှာယူရန်/အကြံပြုရန် ဤပုံစံအတိုင်း ဖြည့်စွက် ပို့ပေးပါခင်ဗျာ:**\n\n"
-            "၁။ လိုချင်သည့် ဝန်ဆောင်မှု (ဥပမာ- ဓာတ်ပုံ၊ ဖိတ်စာ၊ ပရင့်) -\n"
-            "၂။ အရွယ်အစား နှင့် အရေအတွက် -\n"
-            "၃။ အထူးမှာကြားလိုသည်များ -\n\n"
-            "*(အထက်ပါ အချက်အလက်များနှင့်အတူ လိုအပ်သော ပုံများကိုပါ တွဲ၍ ဤချတ်ထဲသို့ ပို့ပေးနိုင်ပါသည်။)*"
-        )
-        bot.send_message(chat_id, order_format_text, parse_mode="Markdown")
-        user_feedback_data[chat_id] = {"step": "waiting_for_order"}
-        
-    elif chat_id in user_feedback_data and user_feedback_data[chat_id].get("step") == "waiting_for_order":
-        order_text = message.text
-        bot.send_message(ADMIN_CHAT_ID, f"📩 ဖောက်သည်ထံမှ အော်ဒါ/စာသား အသစ်:\n\n{order_text}\n\nပို့သူ ID: {chat_id}")
-        bot.send_message(chat_id, "ကျေးဇူးတင်ပါသည်ခင်ဗျာ 🙏။ မိတ်ဆွေ၏ အချက်အလက်များကို ဆိုင်ရှင်ထံသို့ ပေးပို့ပြီးဖြစ်ပါသည်။")
-        del user_feedback_data[chat_id]
-        
-    else:
-        try:
-            response = client.models.generate_content(
-                model='gemini-1.5-flash',
-                contents=text,
-                config={
-                    'system_instruction': "သင်သည် မြန်မာနိုင်ငံ၊ ဝါးခယ်မမြို့ရှိ 'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံဆိုင်မှ ဖောက်သည်များကို ဖော်ရွေစွာ ဝန်ဆောင်မှုပေးသော AI လက်ထောက် ဖြစ်သည်။ ဆိုင်တွင် စာရွက်စာတမ်း မိတ္တူကူးခြင်း၊ ပရင့်ထုတ်ခြင်း၊ ဓါတ်ပုံရိုက်ခြင်း/ထုတ်ခြင်း၊ မင်္ဂလာဖိတ်စာဒီဇိုင်းနှင့် လက်ဆောင်ယပ်တောင်ပြုလုပ်ခြင်း ဝန်ဆောင်မှုများ ရှိသည်။ ဖောက်သည်များကို ယဉ်ကျေးပျူငှာစွာ အကြံပေးပါ။",
-                    'temperature': 0.7,
-                }
-            )
-            bot.reply_to(message, response.text)
-        except Exception as e:
-            bot.reply_to(message, "မိတ်ဆွေ၏ မက်ဆေ့ဂျ်ကို လက်ခံရရှိပါပြီ။ အသေးစိတ်သိလိုပါက အောက်ပါ Menu ခလုတ်များကို အသုံးပြုပေးပါခင်ဗျာ။")
-
-def run_bot():
-    bot.infinity_polling()
+        reply_text = response.text
+    except Exception as e:
+        reply_text = "သူငယ်ချင်းရေ... ခဏလေး လိုင်းခဏနှေးသွားလို့ ထင်တယ်၊ မေးခွန်းလေး တစ်ချက်လောက် ထပ်ပို့ပေးပါဦးနော်။"
+    
+    bot.send_message(chat_id, reply_text)
 
 if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.start()
-    
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
