@@ -17,11 +17,15 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 user_states = {}
 
+# တိုတိုတုပ်တုပ် ဖြေခိုင်းထားသော System Prompt
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
 မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - 09797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
 စာနဲ့ ဓါတ်ပုံထုတ်တာတွေ၊ ဖိတ်စာနဲ့ ပတ်သက်လာရင် ကျွမ်းကျင်သူတစ်ယောက်လို အကြံပေးတတ်တယ်၊ ပြင်ဆင်ပေးတတ်တယ်။
-အသုံးပြုသူ လိုချင်တာကို တန်းပြီးခန့်မှန်းတတ်သူ၊ ဥပမာပေးတတ်သူ၊ နားလည်လွယ်အောင် ဖော်ဖော်ရွေရွေ အားကိုးရသူ ဖြစ်ပါတယ်။
+
+အရေးကြီးသော စည်းကမ်းချက်:
+• စာပြန်သည့်အခါ အရှည်ကြီး မရေးရပါ။
+• လိုရင်းတိုရှင်း တိုတိုတုပ်တုပ်ပဲ စာကြောင်း ၅ ကြောင်း သို့မဟုတ် ၇ ကြောင်းထက် မပိုဘဲ ရင်းနှီးဖော်ရွေစွာ ပြန်ဖြေပေးပါ။
 """
 
 def get_main_menu():
@@ -35,7 +39,7 @@ def get_main_menu():
     return markup
 
 def generate_ai_response(prompt_text):
-    """Gemini AI ထံမှ အဖြေတောင်းယူခြင်း"""
+    """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
     models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
     last_error = ""
 
@@ -54,7 +58,7 @@ def generate_ai_response(prompt_text):
             last_error = str(e)
             print(f"Model {model_name} Error: {e}", flush=True)
 
-    return f"⚠️ Gemini API Error:\n{last_error}\n\n👉 Render Environment Variables တွင် GEMINI_API_KEY မှန်မမှန် စစ်ဆေးပေးပါဦး။"
+    return f"⚠️ Gemini API Error:\n{last_error}\n\n👉 GEMINI_API_KEY မှန်မမှန် Render Environment Variables မှာ စစ်ဆေးပေးပါဦး။"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
@@ -75,7 +79,7 @@ def send_welcome(message):
         "မင်္ဂလာပါ သူငယ်ချင်းရေ... 'ထာဝရ' မှ ကြိုဆိုပါတယ်! 👋\n\n"
         "ငါကတော့ FOREVERRI ပါ။ မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာနဲ့ ပတ်သက်ရင် "
         "ဘာမေးမေး ကူညီပေးဖို့ အဆင်သင့်ရှိပါတယ်နော်။\n"
-        "အောက်က Menu ခလုတ်လေးတွေကို နှိပ်ပြီးတော့လည်း စမ်းကြည့်လို့ရပါတယ်။"
+        "ပုံတွေ/စာရွက်စာတမ်းတွေ ပို့ချင်ရင်လည်း တိုက်ရိုက် ပို့ပေးလို့ရပါတယ်!"
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_menu())
 
@@ -95,6 +99,33 @@ def handle_admin_reply(message):
         bot.reply_to(message, "✅ User ထံ စာပြန်ပို့ပြီးပါပြီ!")
     except Exception as e:
         bot.reply_to(message, f"❌ စာပို့၍ မရပါ: {str(e)}")
+
+@bot.message_handler(content_types=['photo'])
+def handle_incoming_photo(message):
+    chat_id = message.chat.id
+    user_name = message.from_user.first_name
+    caption = message.caption if message.caption else "စာသားမပါပါ"
+    photo_file_id = message.photo[-1].file_id
+
+    if ADMIN_CHAT_ID:
+        admin_msg = (
+            f"📸 **ဓါတ်ပုံအသစ် ရောက်ရှိလာပါတယ်!**\n\n"
+            f"👤 **ပို့သူ:** {user_name}\n"
+            f"🆔 **User ID:** `{chat_id}`\n"
+            f"📝 **Caption:** {caption}\n\n"
+            f"----------------------\n"
+            f"👉 **Reply ပြန်ရန်:**\n`/reply {chat_id} စာပြန်လိုသည့်စာ`"
+        )
+        try:
+            bot.send_photo(ADMIN_CHAT_ID, photo_file_id, caption=admin_msg, parse_mode="Markdown")
+        except Exception as e:
+            print(f"Admin Photo Send Error: {e}", flush=True)
+
+    bot.send_message(
+        chat_id, 
+        "ဓါတ်ပုံလေး ရရှိပါတယ် သူငယ်ချင်း! 📸 'ထာဝရ' မှ စစ်ဆေးပြီး အမြန်ဆုံး ပြန်လည် အကြောင်းပြန်ပေးပါမယ်နော်။", 
+        reply_markup=get_main_menu()
+    )
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -118,7 +149,7 @@ def handle_all_messages(message):
             "📞 **ထာဝရ ဆက်သွယ်ရန်**\n\n"
             "• ဖုန်းနံပါတ်: 09797523108\n"
             "• TikTok: https://www.tiktok.com/@sara.eiswe\n\n"
-            "အလုပ်အတွက်အချိန်မရွေး စုံစမ်းမေးမြန်းလို့ရပါတယ်နော်!"
+            "အချိန်မရွေး စာမေးလို့ရပါတယ်နော်!"
         )
         bot.send_message(chat_id, contact_info, reply_markup=get_main_menu())
         return
@@ -128,7 +159,7 @@ def handle_all_messages(message):
             "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
             "🗺️ **Google Maps လိပ်စာ:** https://maps.app.goo.gl/9UPunmNKnJ5R4Ka58\n"
             "📞 **ဆက်သွယ်ရန် ဖုန်း:** 09797523108\n\n"
-            "'ထာဝရ'မိတ္တူ/ဖိတ်စာဆိုင်မှ ကြိုဆိုပါတယ် သူငယ်ချင်း!"
+            "ဆိုင်သို့ ကြိုဆိုပါတယ် သူငယ်ချင်း!"
         )
         bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
         return
