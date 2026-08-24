@@ -35,8 +35,8 @@ def get_main_menu():
     return markup
 
 def generate_ai_response(prompt_text):
-    """Gemini AI ထံမှ အဖြေတောင်းယူခြင်း (Model များ အလှည့်ကျ စမ်းသပ်မည့် စနစ်)"""
-    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+    """Gemini AI ထံမှ အဖြေတောင်းယူခြင်း"""
+    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
     last_error = ""
 
     for model_name in models_to_try:
@@ -54,7 +54,7 @@ def generate_ai_response(prompt_text):
             last_error = str(e)
             print(f"Model {model_name} Error: {e}", flush=True)
 
-    return f"⚠️ Gemini API Error တက်နေပါသည်:\n{last_error}\n\n👉 Render ရှိ GEMINI_API_KEY ကို စစ်ဆေးပေးပါသူငယ်ချင်း။"
+    return f"⚠️ Gemini API Error:\n{last_error}\n\n👉 Render Environment Variables တွင် GEMINI_API_KEY မှန်မမှန် စစ်ဆေးပေးပါဦး။"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
@@ -169,7 +169,6 @@ def handle_all_messages(message):
         )
         return
 
-    # Gemini AI သို့ စာပို့ခြင်း
     reply_text = generate_ai_response(user_text)
     bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
 
