@@ -40,10 +40,8 @@ def get_main_menu():
 
 def generate_ai_response(prompt_text):
     """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
-    # API မှ လက်ခံသော Model နာမည်အသစ်များ
     models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash']
-    last_error = ""
-
+    
     for model_name in models_to_try:
         try:
             response = client.models.generate_content(
@@ -56,10 +54,11 @@ def generate_ai_response(prompt_text):
             if response and response.text:
                 return response.text
         except Exception as e:
-            last_error = str(e)
-            print(f"Model {model_name} Error: {e}", flush=True)
+            err_msg = str(e)
+            print(f"Model {model_name} Error: {err_msg}", flush=True)
 
-    return f"⚠️ Gemini API Error:\n{last_error}\n\n👉 GEMINI_API_KEY မှန်မမှန် Render Environment Variables မှာ စစ်ဆေးပေးပါဦး။"
+    # Quota / Rate limit ပြည့်သွားပါက ပြသမည့် စာသား
+    return "⏳ လက်ရှိတွင် AI မေးခွန်းအမေးများနေသဖြင့် ခေတ္တ ခိုနားနေပါသည် သူငယ်ချင်း။\n\n၁ မိနစ်ခန့် စောင့်ပြီးမှ ထပ်မေးပေးပါနော် သို့မဟုတ် ဆိုင်သို့ တိုက်ရိုက် မေးမြန်းနိုင်ပါသည်။"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def get_message():
