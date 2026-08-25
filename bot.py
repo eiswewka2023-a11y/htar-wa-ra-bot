@@ -40,8 +40,8 @@ def get_main_menu():
 
 def generate_ai_response(prompt_text):
     """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
-    # လက်ရှိ အသုံးပြုနိုင်သော Model နာမည်အမှန်များ
-    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash']
+    # API မှ လက်ခံသော Model နာမည်အသစ်များ
+    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash']
     last_error = ""
 
     for model_name in models_to_try:
