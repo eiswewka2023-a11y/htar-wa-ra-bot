@@ -25,7 +25,7 @@ SYSTEM_PROMPT = """
 
 အရေးကြီးသော စည်းကမ်းချက်:
 • စာပြန်သည့်အခါ အရှည်ကြီး မရေးရပါ။
-• လိုရင်းတိုရှင်း တိုတိုတုပ်တုပ်ပဲ စာကြောင်း ၂ ကြောင်း သို့မဟုတ် ၃ ကြောင်းထက် မပိုဘဲ ရင်းနှီးဖော်ရွေစွာ ပြန်ဖြေပေးပါ။
+• လိုရင်းတိုရှင်း တိုတိုတုပ်တုပ်ပဲ စာကြောင်း ၄ ကြောင်း သို့မဟုတ် ၅ ကြောင်းထက် မပိုဘဲ ရင်းနှီးဖော်ရွေစွာ ပြန်ဖြေပေးပါ။
 """
 
 def get_main_menu():
@@ -34,12 +34,11 @@ def get_main_menu():
     btn2 = KeyboardButton("🖨️ ဝန်ဆောင်မှုများ")
     btn3 = KeyboardButton("📞 ဆက်သွယ်ရန်")
     btn4 = KeyboardButton("📍 ဆိုင်လိပ်စာ")
-    btn5 = KeyboardButton("📝 Feedback ပေးမယ်(သို့မဟုတ်)ဆိုင်သို့တိုက်ရိုက်ပြောမယ်")
+    btn5 = KeyboardButton("📝 Feedback ပေးမယ်")
     markup.add(btn1, btn2, btn3, btn4, btn5)
     return markup
 
 def generate_ai_response(prompt_text):
-    """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
     models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash']
     
     for model_name in models_to_try:
@@ -54,10 +53,8 @@ def generate_ai_response(prompt_text):
             if response and response.text:
                 return response.text
         except Exception as e:
-            err_msg = str(e)
-            print(f"Model {model_name} Error: {err_msg}", flush=True)
+            print(f"Model {model_name} Error: {e}", flush=True)
 
-    # Quota / Rate limit ပြည့်သွားပါက ပြသမည့် စာသား
     return "⏳ လက်ရှိတွင် AI မေးခွန်းအမေးများနေသဖြင့် ခေတ္တ ခိုနားနေပါသည် သူငယ်ချင်း။\n\n၁ မိနစ်ခန့် စောင့်ပြီးမှ ထပ်မေးပေးပါနော် သို့မဟုတ် ဆိုင်သို့ တိုက်ရိုက် မေးမြန်းနိုင်ပါသည်။"
 
 @app.route(f"/{TOKEN}", methods=["POST"])
@@ -87,18 +84,15 @@ def send_welcome(message):
 # 📲 Admin ဘက်မှ Telegram Native Swipe-Reply ဖြင့် တိုက်ရိုက် စာပြန်သည့် Handler
 @bot.message_handler(func=lambda message: message.reply_to_message is not None)
 def handle_swipe_reply(message):
-    # စာပို့သူသည် Admin ဟုတ်မဟုတ် စစ်ဆေးခြင်း
     if str(message.chat.id) == str(ADMIN_CHAT_ID):
         orig_msg = message.reply_to_message
         text_to_search = orig_msg.text or orig_msg.caption or ""
 
-        # စာသားထဲမှ User ID ကို Regex ဖြင့် ရှာဖွေခြင်း
         match = re.search(r"User ID:\s*`?(\d+)`?", text_to_search)
         if match:
             target_chat_id = match.group(1)
             reply_msg = message.text
 
-            # Customer ၏ State ကို Direct Chat သို့ ပြောင်းမည်
             user_states[int(target_chat_id)] = "CHAT_WITH_ADMIN"
 
             send_text = (
@@ -167,13 +161,13 @@ def handle_all_messages(message):
         bot.send_message(chat_id, services, parse_mode="Markdown", reply_markup=get_main_menu())
         return
 
-elif user_text == "📞 ဆက်သွယ်ရန်":
+    elif user_text == "📞 ဆက်သွယ်ရန်":
         user_states[chat_id] = None
         contact_info = (
             "📞 **ထာဝရ ဆက်သွယ်ရန်**\n\n"
             "• ဖုန်းနံပါတ်: [09797523108](tel:+959797523108)\n"
             "• TikTok: https://www.tiktok.com/@sara.eiswe\n\n"
-            "ဆိုင်ကိုအချိန်မရွေး ဆက်သွယ်ပြီးမေးလို့ရပါတယ်နော်!"
+            "ဆိုင်သို့အချိန်မရွေး ဆက်သွယ်ပြီးမေးလို့ရတယ်နော်!"
         )
         bot.send_message(chat_id, contact_info, parse_mode="Markdown", reply_markup=get_main_menu())
         return
@@ -184,12 +178,12 @@ elif user_text == "📞 ဆက်သွယ်ရန်":
             "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
             "🗺️ **Google Maps လိပ်စာ:** https://maps.app.goo.gl/9UPunmNKnJ5R4Ka58\n"
             "📞 **ဆက်သွယ်ရန် ဖုန်း:** [09797523108](tel:+959797523108)\n\n"
-            "'ထာဝရ'မိတ္တူဆိုင်မှ နွေးထွေးစွာကြိုဆိုပါတယ် သူငယ်ချင်းရေ!"
+            "'ထာဝရ' မိတ္တူ/ဓါတ်ပုံ/ဖိတ်စာဆိုင်မှ နွေးထွေးစွာကြိုဆိုပါတယ် သူငယ်ချင်းရေ!"
         )
         bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
         return
 
-    elif user_text == "📝 Feedback ပေးမယ်(သို့မဟုတ်)ဆိုင်သို့တိုက်ရိုက်ပြောမယ်":
+    elif user_text == "📝 Feedback ပေးမယ်":
         user_states[chat_id] = "WAITING_FOR_FEEDBACK"
         bot.send_message(
             chat_id, 
