@@ -34,7 +34,7 @@ def get_main_menu():
     btn2 = KeyboardButton("🖨️ ဝန်ဆောင်မှုများ")
     btn3 = KeyboardButton("📞 ဆက်သွယ်ရန်")
     btn4 = KeyboardButton("📍 ဆိုင်လိပ်စာ")
-    btn5 = KeyboardButton("📝 Feedback ပေးမယ်")
+    btn5 = KeyboardButton("📝 Feedback ပေးမယ်(သို့မဟုတ်)ဆိုင်သို့တိုက်ရိုက်ပြောမယ်")
     markup.add(btn1, btn2, btn3, btn4, btn5)
     return markup
 
@@ -183,7 +183,7 @@ def handle_all_messages(message):
         bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
         return
 
-    elif user_text == "📝 Feedback ပေးမယ်":
+    elif user_text == "📝 Feedback ပေးမယ်(သို့မဟုတ်)ဆိုင်သို့တိုက်ရိုက်ပြောမယ်":
         user_states[chat_id] = "WAITING_FOR_FEEDBACK"
         bot.send_message(
             chat_id, 
