@@ -39,7 +39,9 @@ def get_main_menu():
     return markup
 
 def generate_ai_response(prompt_text):
-    models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash']
+    """Gemini AI ထံမှ တိုတိုတုပ်တုပ် အဖြေတောင်းယူခြင်း"""
+    # လက်ရှိ အသုံးပြုနိုင်သော Model နာမည်အမှန်များ
+    models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash']
     last_error = ""
 
     for model_name in models_to_try:
