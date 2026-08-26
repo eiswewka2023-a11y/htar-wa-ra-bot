@@ -165,7 +165,7 @@ def handle_all_messages(message):
         user_states[chat_id] = None
         contact_info = (
             "📞 **ထာဝရ ဆက်သွယ်ရန်**\n\n"
-            "• ဖုန်းနံပါတ်: 09797523108\n"
+            "• ဖုန်းနံပါတ်: +959797523108\n"
             "• TikTok: https://www.tiktok.com/@sara.eiswe\n\n"
             "ဆိုင်သို့အချိန်မရွေး ဆက်သွယ်ပြီးမေးလို့ရတယ်နော်!"
         )
@@ -177,7 +177,7 @@ def handle_all_messages(message):
         location = (
             "📍 **'ထာဝရ' မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း**\n\n"
             "🗺️ **Google Maps လိပ်စာ:** https://maps.app.goo.gl/9UPunmNKnJ5R4Ka58\n"
-            "📞 **ဆက်သွယ်ရန် ဖုန်း:** 09797523108\n\n"
+            "📞 **ဆက်သွယ်ရန် ဖုန်း:** +959797523108\n\n"
             "'ထာဝရ' မိတ္တူ/ဓါတ်ပုံ/ဖိတ်စာဆိုင်မှ နွေးထွေးစွာကြိုဆိုပါတယ် သူငယ်ချင်းရေ!"
         )
         bot.send_message(chat_id, location, parse_mode="Markdown", reply_markup=get_main_menu())
