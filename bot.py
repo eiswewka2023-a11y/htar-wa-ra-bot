@@ -153,7 +153,10 @@ def handle_all_messages(message):
 
     elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
-        SERVICE_PHOTO_ID = "AgACAgUAAxkBAAIE2GqWlIuchmLH0PPUr3enzbVZfTYCAALfEWsbP3qxVD6Y6fd6g1ssAQADAgADdwADPQQ"
+
+        # ရထားသော ဓါတ်ပုံ File ID များ
+        PHOTO_1 = "AgACAgUAAxkBAAIE2GqWlIuchmLH0PPUr3enzbVZfTYCAALfEWsbP3qxVD6Y6fd6g1ssAQADAgADdwADPQQ"
+        PHOTO_2 = "AgACAgUAAxkBAAIE4WqWl4RciODqfLSioZgrU9XEkv8fAAL1EWsbP3qxVAlzIojh32W2AQADAgADeAADPQQ"
 
         services_caption = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
@@ -164,11 +167,16 @@ def handle_all_messages(message):
             "လိုချင်တဲ့ ပုံစံလေးတွေရှိရင် စာပို့ပြီး မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း!"
         )
 
-        bot.send_photo(
+        # ပုံ ၂ ပုံကို Album (Media Group) အနေဖြင့် စုစည်းခြင်း
+        media_group = [
+            InputMediaPhoto(PHOTO_1, caption=services_caption, parse_mode="Markdown"),
+            InputMediaPhoto(PHOTO_2)
+        ]
+
+        bot.send_media_group(chat_id, media_group)
+        bot.send_message(
             chat_id, 
-            SERVICE_PHOTO_ID, 
-            caption=services_caption, 
-            parse_mode="Markdown", 
+            "အထက်ပါ ဝန်ဆောင်မှုများနှင့် ပတ်သက်၍ အသေးစိတ် သိရှိလိုပါက မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း! 👇", 
             reply_markup=get_main_menu()
         )
         return
