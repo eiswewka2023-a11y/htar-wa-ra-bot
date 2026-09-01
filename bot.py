@@ -2,7 +2,7 @@ import os
 import re
 from flask import Flask, request
 import telebot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InputMediaPhoto
 from google import genai
 from google.genai import types
 
@@ -20,7 +20,7 @@ user_states = {}
 
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
-မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - 09797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
+မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - +959797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
 စာနဲ့ ဓါတ်ပုံထုတ်တာတွေ၊ ဖိတ်စာနဲ့ ပတ်သက်လာရင် ကျွမ်းကျင်သူတစ်ယောက်လို အကြံပေးတတ်တယ်၊ ပြင်ဆင်ပေးတတ်တယ်။
 
 အရေးကြီးသော စည်းကမ်းချက်:
@@ -114,11 +114,13 @@ def handle_incoming_photo(message):
     caption = message.caption if message.caption else "စာသားမပါပါ"
     photo_file_id = message.photo[-1].file_id
 
+    # Admin သို့ ဓါတ်ပုံနှင့်အတူ File ID ပါ ပြပေးရန်
     if ADMIN_CHAT_ID:
         admin_msg = (
             f"📸 **ဓါတ်ပုံအသစ် ရောက်ရှိလာပါတယ်!**\n\n"
             f"👤 **ပို့သူ:** {user_name}\n"
             f"🆔 **User ID:** `{chat_id}`\n"
+            f"🔑 **File ID:** `{photo_file_id}`\n"
             f"📝 **Caption:** {caption}\n\n"
             f"----------------------\n"
             f"👉 **ဒီစာကို ဘေးပွတ်ဆွဲ (Reply) ပြီး တိုက်ရိုက် စာပြန်နိုင်ပါသည်။**"
@@ -130,7 +132,8 @@ def handle_incoming_photo(message):
 
     bot.send_message(
         chat_id, 
-        "ဓါတ်ပုံလေး ရရှိပါတယ် သူငယ်ချင်း! 📸 'ထာဝရ' မှ စစ်ဆေးပြီး အမြန်ဆုံး ပြန်လည် အကြောင်းပြန်ပေးပါမယ်နော်။", 
+        f"ဓါတ်ပုံလေး ရရှိပါတယ် သူငယ်ချင်း! 📸 'ထာဝရ' မှ စစ်ဆေးပြီး အမြန်ဆုံး ပြန်လည် အကြောင်းပြန်ပေးပါမယ်နော်။\n\n💡 _(File ID: `{photo_file_id}`)_", 
+        parse_mode="Markdown",
         reply_markup=get_main_menu()
     )
 
@@ -150,6 +153,8 @@ def handle_all_messages(message):
 
     elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
+        
+        # နမူနာ: ပုံ ၁ ပုံတည်း ပို့လိုလျှင် (သို့မဟုတ် ပုံမပါဘဲ စာပဲပို့လိုလျှင်)
         services = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
             "• စာရွက်စာတမ်း မိတ္တူကူးခြင်း / စာရွက်ထုတ်ခြင်း\n"
