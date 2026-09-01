@@ -151,11 +151,13 @@ def handle_all_messages(message):
         )
         return
 
-    elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
+elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
         
-        # နမူနာ: ပုံ ၁ ပုံတည်း ပို့လိုလျှင် (သို့မဟုတ် ပုံမပါဘဲ စာပဲပို့လိုလျှင်)
-        services = (
+        # ရလာတဲ့ File ID ကို ဒီမှာ ထည့်ထားပါတယ်
+        SERVICE_PHOTO_ID = "AgACAgUAAxkBAAIE2GqWlIuchmLH0PPUr3enzbVZfTYCAALfEWsbP3qxVD6Y6fd6g1ssAQADAgADdwADPQQ"
+
+        services_caption = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
             "• စာရွက်စာတမ်း မိတ္တူကူးခြင်း / စာရွက်ထုတ်ခြင်း\n"
             "• ဓါတ်ပုံ / လိုင်စင်ဓာတ်ပုံ ပြင်ဆင်ခြင်းနှင့် ရိုက်ကူးထုတ်ပေးခြင်း\n"
@@ -163,7 +165,15 @@ def handle_all_messages(message):
             "• ယပ်တောင်နှင့် အမှတ်တရပစ္စည်း ပြုလုပ်ခြင်း\n\n"
             "လိုချင်တဲ့ ပုံစံလေးတွေရှိရင် စာပို့ပြီး မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း!"
         )
-        bot.send_message(chat_id, services, parse_mode="Markdown", reply_markup=get_main_menu())
+
+        # send_message အစား send_photo ဖြင့် စာရော ပုံပါ တွဲပို့ပေးခြင်း
+        bot.send_photo(
+            chat_id, 
+            SERVICE_PHOTO_ID, 
+            caption=services_caption, 
+            parse_mode="Markdown", 
+            reply_markup=get_main_menu()
+        )
         return
 
     elif user_text == "📞 ဆက်သွယ်ရန်":
