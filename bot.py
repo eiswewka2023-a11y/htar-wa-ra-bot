@@ -20,7 +20,7 @@ user_states = {}
 
 SYSTEM_PROMPT = """
 မင်းနာမည်က FOREVERRI ဖြစ်ပြီး ကောင်လေးတစ်ယောက် ဖြစ်ပါတယ်။ 
-မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်လုပ်ငန်း (ဖုန်းနံပါတ် - +959797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
+မင်းက "ထာဝရ" မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ ယပ်တောင်၊ Mini keychain လုပ်ငန်း (ဖုန်းနံပါတ် - +959797523108) မှာ အလုပ်လုပ်နေတဲ့ သူငယ်ချင်း/မိတ်ဆွေတစ်ယောက်လို စကားပြောပါတယ်။
 စာနဲ့ ဓါတ်ပုံထုတ်တာတွေ၊ ဖိတ်စာနဲ့ ပတ်သက်လာရင် ကျွမ်းကျင်သူတစ်ယောက်လို အကြံပေးတတ်တယ်၊ ပြင်ဆင်ပေးတတ်တယ်။
 
 အရေးကြီးသော စည်းကမ်းချက်:
@@ -75,7 +75,7 @@ def send_welcome(message):
     user_states[message.chat.id] = None
     welcome_text = (
         "မင်္ဂလာပါ သူငယ်ချင်းရေ... 'ထာဝရ' မှ ကြိုဆိုပါတယ်! 👋\n\n"
-        "ငါကတော့ FOREVERRI ပါ။ မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာနဲ့ ပတ်သက်ရင် "
+        "ငါကတော့ FOREVERRI ပါ။ မိတ္တူ၊ ဓါတ်ပုံ၊ ဖိတ်စာ၊ Keychain နဲ့ ပတ်သက်ရင် "
         "ဘာမေးမေး ကူညီပေးဖို့ အဆင်သင့်ရှိပါတယ်နော်။\n"
         "ပုံတွေ/စာရွက်စာတမ်းတွေ ပို့ချင်ရင်လည်း တိုက်ရိုက် ပို့ပေးလို့ရပါတယ်!"
     )
@@ -114,7 +114,7 @@ def handle_incoming_photo(message):
     caption = message.caption if message.caption else "စာသားမပါပါ"
     photo_file_id = message.photo[-1].file_id
 
-    # Admin သို့ ဓါတ်ပုံနှင့်အတူ File ID ပါ ပြပေးရန်
+    # Admin ထံသို့သာ File ID ပါဝင်သော ဓါတ်ပုံ အကြောင်းကြားစာ ပို့မည်
     if ADMIN_CHAT_ID:
         admin_msg = (
             f"📸 **ဓါတ်ပုံအသစ် ရောက်ရှိလာပါတယ်!**\n\n"
@@ -130,9 +130,10 @@ def handle_incoming_photo(message):
         except Exception as e:
             print(f"Admin Photo Send Error: {e}", flush=True)
 
+    # User ထံသို့ File ID စာသားမပါဘဲ ပြန်လည်အကြောင်းပြန်မည်
     bot.send_message(
         chat_id, 
-        f"ဓါတ်ပုံလေး ရရှိပါတယ် သူငယ်ချင်း! 📸 'ထာဝရ' မှ စစ်ဆေးပြီး အမြန်ဆုံး ပြန်လည် အကြောင်းပြန်ပေးပါမယ်နော်။\n\n💡 _(File ID: `{photo_file_id}`)_", 
+        "ဓါတ်ပုံလေး ရရှိပါတယ် သူငယ်ချင်း! 📸 'ထာဝရ' မှ စစ်ဆေးပြီး အမြန်ဆုံး ပြန်လည် အကြောင်းပြန်ပေးပါမယ်နော်။", 
         parse_mode="Markdown",
         reply_markup=get_main_menu()
     )
@@ -154,23 +155,27 @@ def handle_all_messages(message):
     elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
 
-        # ရထားသော ဓါတ်ပုံ File ID များ
-        PHOTO_1 = "AgACAgUAAxkBAAIE2GqWlIuchmLH0PPUr3enzbVZfTYCAALfEWsbP3qxVD6Y6fd6g1ssAQADAgADdwADPQQ"
-        PHOTO_2 = "AgACAgUAAxkBAAIE4WqWl4RciODqfLSioZgrU9XEkv8fAAL1EWsbP3qxVAlzIojh32W2AQADAgADeAADPQQ"
+        # ဓါတ်ပုံ File ID သစ် ၄ ခု
+        PHOTO_1 = "AgACAgUAAxkBAAIFBWqWmyyF9Xz3W3lDmq9tFov6qyxRAAL9EWsbP3qxVKuMH2kmp-5pAQADAgADdwADPQQ"
+        PHOTO_2 = "AgACAgUAAxkBAAIFCGqWnfcLDvNM6Wgwpom3KbWPn3zVAAIDEmsbP3qxVCqgCdIqwqOFAQADAgADeQADPQQ"
+        PHOTO_3 = "AgACAgUAAxkBAAIFC2qWnmmY46QYJYKA60xy9621V4J9AAIGEmsbP3qxVDBD5S3PIuDaAQADAgADeQADPQQ"
+        PHOTO_4 = "AgACAgUAAxkBAAIFDmqWnyiCjTU45tkREfBb-DaTK16uAAIqEWsb98iBVgRRU3d8BxXDAQADAgADdwADPQQ"
 
         services_caption = (
             "🖨️ **ထာဝရ မိတ္တူနှင့် ဓါတ်ပုံလုပ်ငန်း ဝန်ဆောင်မှုများ**\n\n"
             "• စာရွက်စာတမ်း မိတ္တူကူးခြင်း / စာရွက်ထုတ်ခြင်း\n"
             "• ဓါတ်ပုံ / လိုင်စင်ဓာတ်ပုံ ပြင်ဆင်ခြင်းနှင့် ရိုက်ကူးထုတ်ပေးခြင်း\n"
             "• ဖိတ်စာ၊ မင်္ဂလာဖိတ်စာ၊ အလှူဖိတ်စာ အမျိုးမျိုး\n"
-            "• ယပ်တောင်နှင့် အမှတ်တရပစ္စည်း ပြုလုပ်ခြင်း\n\n"
+            "• ယပ်တောင်၊ Mini keychain နှင့် အမှတ်တရပစ္စည်း ပြုလုပ်ခြင်း\n\n"
             "လိုချင်တဲ့ ပုံစံလေးတွေရှိရင် စာပို့ပြီး မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း!"
         )
 
-        # ပုံ ၂ ပုံကို Album (Media Group) အနေဖြင့် စုစည်းခြင်း
+        # ဓါတ်ပုံ ၄ ပုံအား Album (Media Group) အဖြစ် ပို့ပေးခြင်း
         media_group = [
             InputMediaPhoto(PHOTO_1, caption=services_caption, parse_mode="Markdown"),
-            InputMediaPhoto(PHOTO_2)
+            InputMediaPhoto(PHOTO_2),
+            InputMediaPhoto(PHOTO_3),
+            InputMediaPhoto(PHOTO_4)
         ]
 
         bot.send_media_group(chat_id, media_group)
