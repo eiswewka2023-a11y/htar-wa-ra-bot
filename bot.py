@@ -151,10 +151,8 @@ def handle_all_messages(message):
         )
         return
 
-elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
+    elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
-        
-        # ရလာတဲ့ File ID ကို ဒီမှာ ထည့်ထားပါတယ်
         SERVICE_PHOTO_ID = "AgACAgUAAxkBAAIE2GqWlIuchmLH0PPUr3enzbVZfTYCAALfEWsbP3qxVD6Y6fd6g1ssAQADAgADdwADPQQ"
 
         services_caption = (
@@ -166,7 +164,6 @@ elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
             "လိုချင်တဲ့ ပုံစံလေးတွေရှိရင် စာပို့ပြီး မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း!"
         )
 
-        # send_message အစား send_photo ဖြင့် စာရော ပုံပါ တွဲပို့ပေးခြင်း
         bot.send_photo(
             chat_id, 
             SERVICE_PHOTO_ID, 
