@@ -39,7 +39,8 @@ def get_main_menu():
     return markup
 
 def generate_ai_response(prompt_text):
-    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash']
+    # gemini-3.5-flash-lite ကို အဓိကထား၍ Fallback model များ ပါဝင်သည်
+    models_to_try = ['gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-1.5-flash']
     
     for model_name in models_to_try:
         try:
@@ -155,7 +156,6 @@ def handle_all_messages(message):
     elif user_text == "🖨️ ဝန်ဆောင်မှုများ":
         user_states[chat_id] = None
 
-        # ဓါတ်ပုံ File ID သစ် ၄ ခု
         PHOTO_1 = "AgACAgUAAxkBAAIFBWqWmyyF9Xz3W3lDmq9tFov6qyxRAAL9EWsbP3qxVKuMH2kmp-5pAQADAgADdwADPQQ"
         PHOTO_2 = "AgACAgUAAxkBAAIFCGqWnfcLDvNM6Wgwpom3KbWPn3zVAAIDEmsbP3qxVCqgCdIqwqOFAQADAgADeQADPQQ"
         PHOTO_3 = "AgACAgUAAxkBAAIFC2qWnmmY46QYJYKA60xy9621V4J9AAIGEmsbP3qxVDBD5S3PIuDaAQADAgADeQADPQQ"
@@ -170,7 +170,6 @@ def handle_all_messages(message):
             "လိုချင်တဲ့ ပုံစံလေးတွေရှိရင် စာပို့ပြီး မေးမြန်းနိုင်ပါတယ် သူငယ်ချင်း!"
         )
 
-        # ဓါတ်ပုံ ၄ ပုံအား Album (Media Group) အဖြစ် ပို့ပေးခြင်း
         media_group = [
             InputMediaPhoto(PHOTO_1, caption=services_caption, parse_mode="Markdown"),
             InputMediaPhoto(PHOTO_2),
@@ -217,7 +216,9 @@ def handle_all_messages(message):
         )
         return
 
-    if user_states.get(chat_id) == "CHAT_WITH_ADMIN":
+    current_state = user_states.get(chat_id)
+
+    if current_state == "CHAT_WITH_ADMIN":
         if ADMIN_CHAT_ID:
             admin_msg = (
                 f"💬 **Customer ထံမှ တိုက်ရိုက် ပြန်လည် ပို့လိုက်သောစာ:**\n\n"
@@ -235,7 +236,7 @@ def handle_all_messages(message):
         bot.send_message(chat_id, "ဆိုင်သို့ စာပို့လိုက်ပါပြီ သူငယ်ချင်း! ဆိုင်မှ အကြောင်းပြန်ပေးပါလိမ့်မည်။ ❤️", reply_markup=get_main_menu())
         return
 
-    if user_states.get(chat_id) == "WAITING_FOR_FEEDBACK":
+    if current_state == "WAITING_FOR_FEEDBACK":
         user_states[chat_id] = None
         if ADMIN_CHAT_ID:
             admin_msg = (
@@ -258,16 +259,9 @@ def handle_all_messages(message):
         )
         return
 
-    if user_states.get(chat_id) == "AI_CHAT":
-        reply_text = generate_ai_response(user_text)
-        bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
-        return
-
-    bot.send_message(
-        chat_id, 
-        "ကျေးဇူးပြု၍ အောက်ပါ Menu ခလုတ်များမှ ရွေးချယ်ပေးပါနော်။\nAI နဲ့ စကားပြောလိုပါက '💬 စကားပြောမယ်' ခလုတ်ကို နှိပ်ပေးပါ သူငယ်ချင်း! 👇", 
-        reply_markup=get_main_menu()
-    )
+    # တခြား သီးသန့် Mode ထဲမှာ မဟုတ်ပါက AI မှ တိုက်ရိုက် စကားပြန်ပြောမည်
+    reply_text = generate_ai_response(user_text)
+    bot.send_message(chat_id, reply_text, reply_markup=get_main_menu())
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
